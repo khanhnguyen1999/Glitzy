@@ -1,0 +1,11 @@
+export const ErrFriendRequestAlreadyExists = new Error('Friend request already exists');
+export const ErrCannotSendRequestToSelf = new Error('Cannot send friend request to yourself');
+export const ErrFriendRequestNotFound = new Error('Friend request not found');
+export const ErrFriendAlreadyAccepted = new Error('Friend request already accepted');
+export const ErrFriendAlreadyRejected = new Error('Friend request already rejected');
+export const ErrUserNotFound = new Error('User not found');
+export const ErrFriendshipNotFound = new Error('Friendship not found');
+export const ErrUnauthorizedAction = new Error('Unauthorized to perform this action');
+export const ErrInvalidFriendRequestStatus = new Error('Invalid friend request status');
+export const ErrInvalidEmail = new Error('Invalid email format');
+export const ErrInvalidUserId = new Error('Invalid user ID');

@@ -1,0 +1,41 @@
+
+version: '3'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-totrip
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=totrip_secret
+      - MYSQL_DATABASE=totrip_network
+    volumes:
+      - social_mysql:/var/lib/mysql
+    networks:
+      - social
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 20s
+      retries: 10
+  redis:
+    image: redis:6.0
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-totrip:/data
+    environment:
+      - REDIS_PASSWORD=totrip_redis
+    networks:
+      - social
+    command: /bin/sh -c 'redis-server --appendonly yes --requirepass $$REDIS_PASSWORD'
+
+networks:
+  social:
+
+volumes:
+  social_mysql:
+  redis-totrip:

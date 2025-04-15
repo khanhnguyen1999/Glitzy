@@ -1,0 +1,47 @@
+import { Settlement } from "@/types";
+
+export const mockSettlements: Settlement[] = [
+  {
+    id: "settlement1",
+    fromUserId: "user2",
+    toUserId: "user1",
+    amount: 50.25,
+    currency: "USD",
+    date: "2023-07-10T14:30:00Z",
+    status: "completed",
+    method: "cash",
+    notes: "Paying back for dinner",
+  },
+  {
+    id: "settlement2",
+    fromUserId: "user3",
+    toUserId: "user1",
+    amount: 75.00,
+    currency: "USD",
+    date: "2023-07-15T09:45:00Z",
+    status: "completed",
+    method: "online",
+    notes: "Trip expenses",
+  },
+  {
+    id: "settlement3",
+    fromUserId: "user1",
+    toUserId: "user4",
+    amount: 30.50,
+    currency: "USD",
+    date: "2023-07-18T16:20:00Z",
+    status: "pending",
+    method: "bank",
+    notes: "Apartment utilities",
+  },
+  {
+    id: "settlement4",
+    fromUserId: "user5",
+    toUserId: "user1",
+    amount: 125.75,
+    currency: "USD",
+    date: "2023-07-20T11:10:00Z",
+    status: "pending",
+    method: "online",
+  },
+];

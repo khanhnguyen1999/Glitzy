@@ -1,0 +1,280 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model ChatMessages {
+  id        String   @id @map("id") @db.VarChar(36)
+  roomId    String   @map("room_id") @db.VarChar(36)
+  senderId  String   @map("sender_id") @db.VarChar(36)
+  content   String?  @map("content") @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamp(0)
+
+  @@index([roomId], map: "room_id")
+  @@index([senderId], map: "sender_id")
+  @@map("chat_messages")
+}
+
+model ChatRooms {
+  id         String             @id @map("id") @db.VarChar(36)
+  creatorId  String             @map("creator_id") @db.VarChar(36)
+  receiverId String             @map("receiver_id") @db.VarChar(36)
+  type       chat_rooms_type?   @default(direct) @map("type")
+  status     chat_rooms_status? @default(pending) @map("status")
+  createdAt  DateTime           @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime           @default(now()) @map("updated_at") @db.Timestamp(0)
+  deletedAt  DateTime?          @map("deleted_at") @db.Timestamp(0)
+
+  @@index([creatorId], map: "creator_id")
+  @@index([receiverId], map: "receiver_id")
+  @@map("chat_rooms")
+}
+
+model Users {
+  id            String        @id @map("id") @db.VarChar(36)
+  cover         String?       @map("cover") @db.VarChar(255)
+  avatar        String?       @map("avatar") @db.Text()
+  username      String        @map("username") @db.VarChar(100)
+  firstName     String        @map("first_name") @db.VarChar(100)
+  lastName      String        @map("last_name") @db.VarChar(100)
+  password      String        @map("password") @db.VarChar(100)
+  salt          String        @map("salt") @db.VarChar(50)
+  role          users_role    @default(user) @map("role")
+  bio           String?       @map("bio") @db.VarChar(255)
+  websiteUrl    String?       @map("website_url") @db.VarChar(255)
+  followerCount Int?          @default(0) @map("follower_count") @db.UnsignedInt
+  postCount     Int?          @default(0) @map("post_count") @db.UnsignedInt
+  status        users_status? @default(active) @map("status")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime      @default(now()) @map("updated_at") @db.Timestamp(0)
+  
+  // Relations for expense module
+  expenses       Expenses[]        @relation("ExpenseCreator")
+  paidExpenses   Expenses[]        @relation("ExpensePayer")
+  expenseSplits  ExpenseSplits[]   @relation("ExpenseSplitUser")
+  groupMembers   GroupMembers[]    @relation("GroupMember")
+  createdGroups  Groups[]          @relation("GroupCreator")
+  messages       messages[]        @relation("UserMessages")
+
+  @@map("users")
+}
+
+model Groups {
+  id          String        @id @map("id") @db.VarChar(36)
+  name        String        @map("name") @db.VarChar(100)
+  description String?       @map("description") @db.Text
+  image       String?       @map("image") @db.VarChar(255)
+  creatorId   String        @map("creator_id") @db.VarChar(36)
+  category    group_category? @default(other) @map("category")
+  location    String?       @map("location") @db.VarChar(255)
+  status      group_status? @default(active) @map("status")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime      @default(now()) @map("updated_at") @db.Timestamp(0)
+  deletedAt   DateTime?     @map("deleted_at") @db.Timestamp(0)
+
+  // Relations
+  creator     Users          @relation("GroupCreator", fields: [creatorId], references: [id])
+  members     GroupMembers[]  @relation("GroupMembers")
+  expenses    Expenses[]      @relation("GroupExpenses")
+  messages    messages[]      @relation("GroupMessages")
+  travelRecommendations TravelRecommendation[] @relation("GroupTravelRecommendations")
+
+  @@index([creatorId], map: "creator_id")
+  @@map("groups")
+}
+
+model GroupMembers {
+  id        String             @id @map("id") @db.VarChar(36)
+  groupId   String             @map("group_id") @db.VarChar(36)
+  userId    String             @map("user_id") @db.VarChar(36)
+  role      group_member_role? @default(member) @map("role")
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime           @default(now()) @map("updated_at") @db.Timestamp(0)
+
+  // Relations
+  group     Groups  @relation("GroupMembers", fields: [groupId], references: [id])
+  user      Users   @relation("GroupMember", fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@index([groupId], map: "group_id")
+  @@index([userId], map: "user_id")
+  @@map("group_members")
+}
+
+model Expenses {
+  id          String          @id @map("id") @db.VarChar(36)
+  title       String          @map("title") @db.VarChar(100)
+  description String?         @map("description") @db.Text
+  amount      Decimal         @map("amount") @db.Decimal(10, 2)
+  currency    String          @default("USD") @map("currency") @db.VarChar(3)
+  category    expense_category @map("category")
+  date        DateTime        @map("date") @db.Date
+  groupId     String?         @map("group_id") @db.VarChar(36)
+  creatorId   String          @map("creator_id") @db.VarChar(36)
+  paidById    String          @map("paid_by_id") @db.VarChar(36)
+  status      expense_status? @default(active) @map("status")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime        @default(now()) @map("updated_at") @db.Timestamp(0)
+  deletedAt   DateTime?       @map("deleted_at") @db.Timestamp(0)
+
+  // Relations
+  creator   Users           @relation("ExpenseCreator", fields: [creatorId], references: [id])
+  paidBy    Users           @relation("ExpensePayer", fields: [paidById], references: [id])
+  group     Groups?         @relation("GroupExpenses", fields: [groupId], references: [id])
+  splitWith ExpenseSplits[] @relation("ExpenseSplits")
+
+  @@index([groupId], map: "group_id")
+  @@index([creatorId], map: "creator_id")
+  @@index([paidById], map: "paid_by_id")
+  @@map("expenses")
+}
+
+model ExpenseSplits {
+  id        String   @id @map("id") @db.VarChar(36)
+  expenseId String   @map("expense_id") @db.VarChar(36)
+  userId    String   @map("user_id") @db.VarChar(36)
+  amount    Decimal  @map("amount") @db.Decimal(10, 2)
+  isPaid    Boolean  @default(false) @map("is_paid")
+  paidAt    DateTime? @map("paid_at") @db.Timestamp(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamp(0)
+
+  // Relations
+  expense   Expenses @relation("ExpenseSplits", fields: [expenseId], references: [id])
+  user      Users    @relation("ExpenseSplitUser", fields: [userId], references: [id])
+
+  @@unique([expenseId, userId])
+  @@index([expenseId], map: "expense_id")
+  @@index([userId], map: "user_id")
+  @@map("expense_splits")
+}
+
+enum chat_rooms_type {
+  direct
+  group
+}
+
+enum chat_rooms_status {
+  pending
+  accepted
+  rejected
+  blocked
+}
+
+enum users_role {
+  user
+  admin
+}
+
+enum users_status {
+  active
+  pending
+  inactive
+  banned
+  deleted
+}
+
+enum friends_status {
+  pending
+  accepted
+  rejected
+}
+
+enum group_status {
+  active
+  inactive
+  archived
+  deleted
+}
+
+enum group_category {
+  travel
+  roommates
+  event
+  family
+  friends
+  other
+}
+
+enum group_member_role {
+  admin
+  member
+}
+
+enum expense_category {
+  food
+  transportation
+  accommodation
+  activities
+  shopping
+  other
+}
+
+enum expense_status {
+  active
+  settled
+  cancelled
+  deleted
+}
+
+model friends {
+  id        String         @id @map("id") @db.VarChar(36)
+  userId    String         @map("user_id") @db.VarChar(36)
+  friendId  String         @map("friend_id") @db.VarChar(36)
+  status    friends_status @default(pending) @map("status")
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamp(0)
+
+  @@index([userId], map: "user_id")
+  @@index([friendId], map: "friend_id")
+  @@index([status], map: "status")
+  @@map("friends")
+}
+
+model messages {
+  id          String    @id @map("id") @db.VarChar(36)
+  groupId     String    @map("group_id") @db.VarChar(36)
+  senderId    String    @map("sender_id") @db.VarChar(36)
+  text        String    @map("text") @db.Text
+  timestamp   DateTime  @default(now()) @map("timestamp") @db.Timestamp(0)
+  attachments Json?     @map("attachments") @db.Json
+  mentions    Json?     @map("mentions") @db.Json
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamp(0)
+
+  // Relations
+  group       Groups    @relation("GroupMessages", fields: [groupId], references: [id])
+  sender      Users     @relation("UserMessages", fields: [senderId], references: [id])
+
+  @@index([groupId], map: "group_id")
+  @@index([senderId], map: "sender_id")
+  @@map("messages")
+}
+
+model TravelRecommendation {
+  id          String    @id @map("id") @db.VarChar(36)
+  groupId     String    @map("group_id") @db.VarChar(36)
+  name        String    @map("name") @db.VarChar(255)
+  description String?   @map("description") @db.Text
+  address     String?   @map("address") @db.Text
+  imageUrl    String?   @map("image_url") @db.Text
+  status      travel_recommendation_status @default(todo) @map("status")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamp(0)
+
+  // Relations
+  group       Groups    @relation("GroupTravelRecommendations", fields: [groupId], references: [id])
+
+  @@index([groupId], map: "group_id")
+  @@map("travel_recommendations")
+}
+
+enum travel_recommendation_status {
+  todo
+  completed
+  rejected
+}
