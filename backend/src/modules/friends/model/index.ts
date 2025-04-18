@@ -1,10 +1,14 @@
 import { z } from "zod";
 
+// This enum must match the database schema's friends_status enum
 export enum FriendStatus {
   PENDING = 'pending',
   ACCEPTED = 'accepted',
   REJECTED = 'rejected',
 }
+
+// For virtual friend statuses that aren't stored in the database
+export type VirtualFriendStatus = FriendStatus | 'none';
 
 export const friendSchema = z.object({
   id: z.string().uuid(),

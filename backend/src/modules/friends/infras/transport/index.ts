@@ -1,5 +1,5 @@
 import { IFriendUseCase } from '@modules/friends/interface';
-import { Friend, FriendCondDTO, FriendRequestDTO, FriendResponseDTO, FriendSearchDTO, FriendUpdateDTO } from '@modules/friends/model';
+import { Friend, FriendCondDTO, FriendRequestDTO, FriendResponseDTO, FriendSearchDTO, FriendStatus, FriendUpdateDTO } from '@modules/friends/model';
 import { jwtProvider } from '@shared/components/jwt';
 import { Requester } from '@shared/interface';
 import { PagingDTO } from '@shared/model';
@@ -124,6 +124,60 @@ export class FriendHTTPService extends BaseHttpService<Friend, FriendRequestDTO,
     const result = await this.usecase.getFriendsList(requester, paging);
     successResponse(result, res);
   }
+  
+  /**
+   * Get friends by status
+   * GET /api/friends/status/:status
+   */
+  async getFriendsByStatusAPI(req: Request, res: Response) {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      throw ErrUnauthorized.withMessage('Access token is missing');
+    }
+
+    const payload = await jwtProvider.verifyToken(token);
+    if (!payload) {
+      throw ErrUnauthorized.withMessage('Invalid access token');
+    }
+
+    const requester = payload as Requester;
+    const status = req.params.status as FriendStatus;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    // Validate status parameter
+    if (!Object.values(FriendStatus).includes(status)) {
+      throw new Error(`Invalid status: ${status}. Must be one of: ${Object.values(FriendStatus).join(', ')}`);
+    }
+    
+    const paging: PagingDTO = { page, limit };
+    const result = await this.usecase.getFriendsByStatus(requester, status, paging);
+    successResponse(result, res);
+  }
+  
+  /**
+   * Get all friends with their statuses (pending, accepted, rejected)
+   * GET /api/friends/all-with-status
+   */
+  async getAllFriendsWithStatusAPI(req: Request, res: Response) {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      throw ErrUnauthorized.withMessage('Access token is missing');
+    }
+
+    const payload = await jwtProvider.verifyToken(token);
+    if (!payload) {
+      throw ErrUnauthorized.withMessage('Invalid access token');
+    }
+
+    const requester = payload as Requester;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    const paging: PagingDTO = { page, limit };
+    const result = await this.usecase.getAllFriendsWithStatus(requester, paging);
+    successResponse(result, res);
+  }
 
   /**
    * Search friends by name or email
@@ -199,5 +253,33 @@ export class FriendHTTPService extends BaseHttpService<Friend, FriendRequestDTO,
     
     const result = await this.usecase.removeFriend(requester, friendId);
     successResponse({ success: result }, res);
+  }
+
+  /**
+   * Search for users who are not friends
+   * GET /api/friends/users/search/non-friends
+   */
+  async searchNonFriendsAPI(req: Request, res: Response) {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      throw ErrUnauthorized.withMessage('Access token is missing');
+    }
+
+    const payload = await jwtProvider.verifyToken(token);
+    if (!payload) {
+      throw ErrUnauthorized.withMessage('Invalid access token');
+    }
+
+    const requester = payload as Requester;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    const searchData: FriendSearchDTO = {
+      name: req.query.query as string,
+    };
+    
+    const paging: PagingDTO = { page, limit };
+    const result = await this.usecase.searchNonFriends(requester, searchData, paging);
+    successResponse(result, res);
   }
 }

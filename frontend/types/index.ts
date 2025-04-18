@@ -153,3 +153,51 @@ export interface User {
       username?: string;
     };
   }
+
+  export interface User {
+    id: string;
+    name: string;
+    avatar?: string;
+  }
+  
+  export interface Expense {
+    id: string;
+    tripId: string;
+    title: string;
+    amount: number;
+    paidBy: string; // User ID
+    paidByName: string; // User name
+    date: string;
+    splitType: 'equally' | 'percentage' | 'custom';
+    participants: string[]; // User IDs
+  }
+  
+  export interface Trip {
+    id: string;
+    name: string;
+    participants: User[];
+    startDate?: string;
+    endDate?: string;
+    location?: string;
+    image?: string;
+    status: 'active' | 'planning' | 'completed';
+  }
+  
+  export interface TripWithExpenses extends Trip {
+    expenses: Expense[];
+  }
+  
+  export interface ItineraryActivity {
+    id: string;
+    tripId: string;
+    title: string;
+    date: string; // YYYY-MM-DD
+    startTime: string; // HH:MM
+    endTime: string; // HH:MM
+    duration: number; // in hours
+    location?: string;
+    type: 'attraction' | 'food' | 'transport' | 'accommodation' | 'other';
+    notes?: string;
+    participants: string[]; // User IDs
+    status?: 'confirmed' | 'pending' | 'cancelled';
+  }

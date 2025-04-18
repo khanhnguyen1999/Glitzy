@@ -21,7 +21,10 @@ export const setupFriendsModule = (sctx: ServiceContext) => {
   router.post('/reject/:id', mdlFactory.auth, httpService.rejectFriendRequestAPI.bind(httpService));
   router.post('/cancel/:id', mdlFactory.auth, httpService.cancelFriendRequestAPI.bind(httpService));
   router.get('/', mdlFactory.auth, httpService.getFriendsListAPI.bind(httpService));
+  router.get('/status/:status', mdlFactory.auth, httpService.getFriendsByStatusAPI.bind(httpService));
+  router.get('/all-with-status', mdlFactory.auth, httpService.getAllFriendsWithStatusAPI.bind(httpService));
   router.get('/search', mdlFactory.auth, httpService.searchFriendsAPI.bind(httpService));
+  router.get('/users/search/non-friends', mdlFactory.auth, httpService.searchNonFriendsAPI.bind(httpService));
   router.get('/mutual/:id', mdlFactory.auth, httpService.getMutualFriendsAPI.bind(httpService));
   router.delete('/:id', mdlFactory.auth, httpService.removeFriendAPI.bind(httpService));
   return router;

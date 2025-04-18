@@ -59,6 +59,10 @@ export class PrismaFriendRepository implements IRepository<Friend, FriendCondDTO
   async findMutualFriends(userId: string, otherUserId: string, paging: PagingDTO): Promise<Paginated<FriendResponseDTO>> {
     return await this.queryRepository.findMutualFriends(userId, otherUserId, paging);
   }
+  
+  async searchNonFriendsByNameOrEmail(userId: string, query: FriendSearchDTO, paging: PagingDTO): Promise<Paginated<FriendResponseDTO>> {
+    return await this.queryRepository.searchNonFriendsByNameOrEmail(userId, query, paging);
+  }
 }
 
 export class PrismaFriendCommandRepository implements IFriendCommandRepository {
@@ -300,6 +304,85 @@ export class PrismaFriendQueryRepository implements IFriendQueryRepository {
     
     return {
       data: result.filter(Boolean) as FriendResponseDTO[],
+      paging,
+      total
+    };
+  }
+  
+  async searchNonFriendsByNameOrEmail(userId: string, query: FriendSearchDTO, paging: PagingDTO): Promise<Paginated<FriendResponseDTO>> {
+    const skip = (paging.page - 1) * paging.limit;
+    
+    // First get all friend IDs for the user (including pending requests)
+    const friendships = await prisma.friends.findMany({
+      where: {
+        OR: [
+          { userId },
+          { friendId: userId }
+        ]
+      }
+    });
+    
+    // Extract all user IDs that have any relationship with the current user
+    const relatedUserIds = friendships.map((f: any) => 
+      f.userId === userId ? f.friendId : f.userId
+    );
+    
+    // Add the user's own ID to exclude from results
+    relatedUserIds.push(userId);
+    
+    // Build search condition to find users who are NOT friends
+    const searchCondition: any = {
+      id: { notIn: relatedUserIds }
+    };
+    
+    if (query.name) {
+      searchCondition.OR = [
+        { firstName: { contains: query.name } },
+        { lastName: { contains: query.name } },
+        { username: { contains: query.name } }
+      ];
+    }
+    
+    if (query.email) {
+      if (!searchCondition.OR) searchCondition.OR = [];
+      searchCondition.OR.push({ username: { contains: query.email } });
+    }
+    
+    // Count total matching non-friends
+    const total = await prisma.users.count({ where: searchCondition });
+    
+    // Get matching non-friends
+    const matchingUsers = await prisma.users.findMany({
+      where: searchCondition,
+      take: paging.limit,
+      skip,
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    // Map to response format
+    const result = matchingUsers.map((user: any) => {
+      // Create a response object without directly using the database schema
+      // This is a virtual representation, not stored in the database
+      return {
+        id: v7(), // Generate a placeholder ID for the response
+        userId,
+        friendId: user.id,
+        // Use type assertion to bypass the type checking
+        // since this is just for display purposes and won't be stored in DB
+        status: 'none' as any, 
+        createdAt: new Date(),
+        friend: {
+          id: user.id,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          avatar: user.avatar
+        }
+      } as FriendResponseDTO;
+    });
+    
+    return {
+      data: result,
       paging,
       total
     };

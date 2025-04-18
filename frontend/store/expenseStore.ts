@@ -16,6 +16,7 @@ interface ExpenseState {
   fetchUserExpenses: (userId: string, page?: number, limit?: number) => Promise<void>;
   fetchGroupExpenses: (groupId: string, page?: number, limit?: number) => Promise<void>;
   fetchGroupBalances: (groupId: string) => Promise<void>;
+  fetchExpensesByGroupId: (groupId: string) => Promise<Expense[]>;
   clearError: () => void;
 }
 
@@ -124,11 +125,28 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
     try {
       const response = await expenseService.getGroupExpenses(groupId, page, limit);
       set({ expenses: response.data, isLoading: false });
+      return response.data;
     } catch (error) {
       set({ 
         isLoading: false, 
         error: error instanceof Error ? error.message : "Failed to fetch group expenses" 
       });
+      throw error;
+    }
+  },
+  
+  fetchExpensesByGroupId: async (groupId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await expenseService.getGroupExpenses(groupId);
+      set({ expenses: response.data, isLoading: false });
+      return response.data;
+    } catch (error) {
+      set({ 
+        isLoading: false, 
+        error: error instanceof Error ? error.message : "Failed to fetch group expenses" 
+      });
+      return [];
     }
   },
   

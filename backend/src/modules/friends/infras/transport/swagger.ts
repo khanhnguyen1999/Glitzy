@@ -110,7 +110,7 @@
 
 /**
  * @swagger
- * /v1/friends/request:
+ * /v1/friends/status/pending:
  *   post:
  *     summary: Send a friend request
  *     tags: [Friends]

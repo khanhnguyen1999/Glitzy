@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { lightColors, darkColors } from "@/constants/colors";
+import { colors } from "@/constants/colors";
 
 export type ThemeType = "light" | "dark";
 
@@ -15,7 +15,7 @@ interface SettingsState {
   currency: Currency;
   theme: ThemeType;
   notifications: boolean;
-  colors: typeof lightColors;
+  colors: typeof colors;
   updateCurrency: (currency: Currency) => void;
   updateTheme: (theme: ThemeType) => void;
   toggleNotifications: () => void;
@@ -31,7 +31,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       theme: "light",
       notifications: true,
-      colors: lightColors,
+      colors: colors,
       
       updateCurrency: (currency: Currency) => {
         set({ currency });
@@ -40,7 +40,7 @@ export const useSettingsStore = create<SettingsState>()(
       updateTheme: (theme: ThemeType) => {
         set({ 
           theme,
-          colors: theme === "dark" ? darkColors : lightColors
+          colors: theme === "dark" ? colors : colors
         });
       },
       

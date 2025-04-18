@@ -1,5 +1,5 @@
 {
-  "name": "my-full-stack-app",
+  "name": "glitzy-app",
   "version": "1.0.0",
   "description": "Full stack app with React Native frontend and Express.js backend",
   "main": "index.js",

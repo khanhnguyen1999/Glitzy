@@ -30,27 +30,37 @@ export default function ProfileScreen() {
     {
       icon: <User size={20} color={colors.primary} />,
       title: "Account Settings",
-      onPress: () => router.push("/settings/account"),
+      onPress: () => router.push({
+        pathname: "/settings/account" as any
+      }),
     },
     {
       icon: <CreditCard size={20} color={colors.primary} />,
       title: "Payment Methods",
-      onPress: () => router.push("/settings/payment"),
+      onPress: () => router.push({
+        pathname: "/settings/payment" as any
+      }),
     },
     {
       icon: <FileText size={20} color={colors.primary} />,
       title: "Expense Reports",
-      onPress: () => router.push("/reports"),
+      onPress: () => router.push({
+        pathname: "/reports" as any
+      }),
     },
     {
       icon: <Bell size={20} color={colors.primary} />,
       title: "Notifications",
-      onPress: () => router.push("/settings/notifications"),
+      onPress: () => router.push({
+        pathname: "/settings/notifications" as any
+      }),
     },
     {
       icon: <HelpCircle size={20} color={colors.primary} />,
       title: "Help & Support",
-      onPress: () => router.push("/help"),
+      onPress: () => router.push({
+        pathname: "/help" as any
+      }),
     },
   ];
 
@@ -59,12 +69,12 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.profileInfo}>
-            <Avatar
+            {user?.avatar && <Avatar
               uri={user.avatar}
               name={user.username}
               size="large"
               showBorder
-            />
+            />}
             <View style={styles.nameContainer}>
               <Text style={styles.name}>{user?.firstName} {user?.lastName}</Text>
               <Text style={styles.email}>{user?.username}</Text>
@@ -73,7 +83,9 @@ export default function ProfileScreen() {
           
           <Button
             title="Edit Profile"
-            onPress={() => router.push("/settings/profile")}
+            onPress={() => router.push({
+              pathname: "/settings/profile" as any
+            })}
             variant="outline"
             size="small"
           />
@@ -84,7 +96,9 @@ export default function ProfileScreen() {
           <Text style={styles.balanceAmount}>$124.50</Text>
           <Button
             title="Add Funds"
-            onPress={() => router.push("/add-funds")}
+            onPress={() => router.push({
+              pathname: "/add-funds" as any
+            })}
             style={styles.addFundsButton}
           />
         </Card>
@@ -100,7 +114,7 @@ export default function ProfileScreen() {
                 {item.icon}
                 <Text style={styles.menuItemTitle}>{item.title}</Text>
               </View>
-              <ChevronRight size={20} color={colors.inactive} />
+              <ChevronRight size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           ))}
         </View>
@@ -170,7 +184,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginHorizontal: 20,
     marginBottom: 20,
-    shadowColor: colors.black,
+    shadowColor: colors.background,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

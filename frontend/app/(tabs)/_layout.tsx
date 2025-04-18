@@ -1,99 +1,60 @@
-import React, { useEffect } from "react";
-import { Tabs, useRouter, Redirect } from "expo-router";
+import React from "react";
+import { Tabs } from "expo-router";
 import { colors } from "@/constants/colors";
-import { 
-  Home, 
-  Users, 
-  PlusCircle, 
-  Activity, 
-  User 
-} from "lucide-react-native";
-import { TouchableOpacity, StyleSheet, View, ActivityIndicator } from "react-native";
-import { useActivityStore } from "@/store/activityStore";
-import { useAuth } from "../../context/AuthContext";
+import { Home, Users, Plus, DollarSign, User } from "lucide-react-native";
+import { TouchableOpacity, StyleSheet, View } from "react-native";
+import { useRouter } from "expo-router";
 
 export default function TabLayout() {
-  const { unreadCount, fetchUnreadCount } = useActivityStore();
-  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   
-  React.useEffect(() => {
-    fetchUnreadCount();
-  }, []);
-  
-  // Handle authentication
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-  
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    return <Redirect href="/(auth)/login" />
-  }
-
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.inactive,
-        tabBarStyle: styles.tabBar,
-        headerStyle: styles.header,
-        headerTitleStyle: styles.headerTitle,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: styles.tabBarLabel,
+        tabBarInactiveTintColor: colors.tabBarInactive,
+        tabBarStyle: {
+          borderTopWidth: 1,
+          borderTopColor: colors.separator,
+          height: 60,
+          paddingBottom: 8,
+        },
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
+          title: "Home",
           tabBarIcon: ({ color }) => <Home size={24} color={color} />,
-          tabBarLabel: "Home",
         }}
       />
-      
       <Tabs.Screen
-        name="groups"
+        name="friends"
         options={{
-          title: "Groups",
+          title: "Friends",
           tabBarIcon: ({ color }) => <Users size={24} color={color} />,
         }}
       />
-      
       <Tabs.Screen
-        name="add-expense"
+        name="new-trip"
         options={{
-          title: "Add Expense",
+          title: "New Trip",
           tabBarIcon: ({ color }) => (
-            <View style={styles.addButtonContainer}>
-              <PlusCircle size={32} color={colors.primary} />
-            </View>
+            <Plus size={24} color="white" />
           ),
-          tabBarLabel: "",
-        }}
-      />
-      
-      <Tabs.Screen
-        name="activity"
-        options={{
-          title: "Activity",
-          tabBarIcon: ({ color }) => (
-            <View>
-              <Activity size={24} color={color} />
-              {unreadCount > 0 && (
-                <View style={styles.badge}>
-                  {/* No text needed for small badge */}
-                </View>
-              )}
-            </View>
+          tabBarButton: (props) => (
+            <NewTripButton {...props} />
           ),
         }}
       />
-      
+      <Tabs.Screen
+        name="expenses"
+        options={{
+          title: "Expenses",
+          tabBarIcon: ({ color }) => <DollarSign size={24} color={color} />,
+        }}
+      />
       <Tabs.Screen
         name="profile"
         options={{
@@ -105,52 +66,37 @@ export default function TabLayout() {
   );
 }
 
+// Custom button for the center tab
+function NewTripButton(props: any) {
+  const router = useRouter();
+  
+  return (
+    <TouchableOpacity
+      {...props}
+      style={styles.newTripButton}
+      onPress={() => {
+        router.push('/create-trip');
+      }}
+    >
+      <View style={styles.newTripButtonInner}>
+        <Plus size={24} color="white" />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  tabBar: {
-    height: 70,
-    paddingBottom: 8,
-    paddingTop: 8,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  newTripButton: {
+    flex: 1,
+    alignItems: "center",
   },
-  header: {
-    backgroundColor: colors.white,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  headerTitle: {
-    color: colors.text,
-    fontWeight: "600",
-    fontSize: 18,
-  },
-  tabBarLabel: {
-    fontSize: 12,
-  },
-  addButtonContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.white,
+  newTripButtonInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 55,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  badge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.notification,
+    marginBottom: 24,
   },
 });

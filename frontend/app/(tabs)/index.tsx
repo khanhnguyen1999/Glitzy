@@ -13,24 +13,59 @@ import { useGroupStore } from "@/store/groupStore";
 import { useRouter } from "expo-router";
 import { Plus, ArrowRight } from "lucide-react-native";
 import { useAuthStore } from "@/store/authStore";
+import { SvgXml } from 'react-native-svg';
+
+import { TouchableOpacity, Image } from 'react-native';
+import { Bell, UserPlus, DollarSign } from 'lucide-react-native';
+import { FeaturedTripCard } from '@/components/FeaturedTripCard';
+import { UpcomingTripItem } from '@/components/UpcomingTripItem';
+import Loading from '@/components/LoadingCommon/Loading';
+// Define types for our data models
+interface Expense {
+  id: string;
+  // Add other expense properties as needed
+}
+
+interface Friend {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  avatarUrl?: string;
+  // Add other friend properties as needed
+}
+
+interface Group {
+  id: string;
+  // Add other group properties as needed
+}
+
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatar?: string;
+  // Add other user properties as needed
+}
 
 export default function HomeScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const { user } = useAuthStore();
-  const { expenses, fetchExpenses, isLoading: expensesLoading } = useExpenseStore();
-  const { friends, fetchFriends, isLoading: friendsLoading } = useFriendStore();
-  const { groups, fetchGroups, isLoading: groupsLoading } = useGroupStore();
-  
+  const { user } = useAuthStore() as { user: User };
+  const { expenses, fetchExpenses, isLoading: expensesLoading } = useExpenseStore() as { 
+    expenses: Expense[], 
+    fetchExpenses: (userId: string) => Promise<void>, 
+    isLoading: boolean 
+  };
+
+
   useEffect(() => {
     loadData();
   }, []);
   
   const loadData = async () => {
     await Promise.all([
-      fetchExpenses(user.id),
-      fetchFriends(),
-      user?.id && fetchGroups(user?.id),
+      user?.id ? fetchExpenses(user.id) : Promise.resolve(),
     ]);
   };
   
@@ -39,123 +74,92 @@ export default function HomeScreen() {
     await loadData();
     setRefreshing(false);
   };
+
+  const handleViewDetails = (tripId: string) => {
+    router.push(`/trip/${tripId}`);
+  };
   
   // Calculate balances
   const youOwe = 150.75; // In a real app, calculate this from expenses
   const youAreOwed = 275.25; // In a real app, calculate this from expenses
-  const totalBalance = youAreOwed - youOwe;
-  
-  const recentGroups = groups.slice(0, 2);
+
+    
+  const handleNotificationPress = () => {
+    // showNotification('You have no new notifications', 'info');
+  };
+
+  const handleSettleUp = () => {
+    // Use replace instead of push to avoid navigation issues
+    // router.replace('/settle-up');
+  };
+
+  if(!user || expensesLoading) {
+    return <Loading fullScreen text="Please wait..." />
+  }
+
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+    <SafeAreaView style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.greeting}>Hello, {user.firstName}</Text>
-          <Text style={styles.subGreeting}>Here's your financial summary</Text>
-        </View>
-        
-        <View style={styles.balanceContainer}>
-          <BalanceSummary
-            totalBalance={totalBalance}
-            youOwe={youOwe}
-            youAreOwed={youAreOwed}
-          />
-        </View>
-        
-        <View style={styles.actionsContainer}>
-          <Button
-            title="Add an expense"
-            onPress={() => router.push("/add-expense")}
-            icon={<Plus size={18} color={colors.white} />}
-            style={styles.actionButton}
-          />
-          <Button
-            title="Settle up"
-            onPress={() => router.push("/settle")}
-            variant="outline"
-            style={styles.actionButton}
-          />
-        </View>
-        
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Expenses</Text>
-            <Button
-              title="See all"
-              onPress={() => router.push("/expenses")}
-              variant="outline"
-              size="small"
-              icon={<ArrowRight size={14} color={colors.primary} />}
-            />
+          <View>
+            <Text style={styles.greeting}>Hi, {user?.firstName}</Text>
+            <Text style={styles.subGreeting}>Ready for your next adventure?</Text>
           </View>
-          
-          {expenses.length > 0 ? (
-            expenses.map((expense) => (
-              <ExpenseItem
-                key={expense.id}
-                expense={expense}
-                onPress={() => router.push(`/expenses/${expense.id}`)}
-              />
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No recent expenses</Text>
-          )}
+          <View style={styles.headerRight}>
+            <TouchableOpacity 
+              style={styles.notificationButton}
+              onPress={handleNotificationPress}
+            >
+              <Bell size={20} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity>
+              {user.avatar && <SvgXml style={styles.userAvatar} xml={user.avatar} width="100" height="100" />}
+            </TouchableOpacity>
+          </View>
         </View>
         
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Your Groups</Text>
-            <Button
-              title="See all"
-              onPress={() => router.push("/groups")}
-              variant="outline"
-              size="small"
-              icon={<ArrowRight size={14} color={colors.primary} />}
-            />
-          </View>
-          
-          {recentGroups.length > 0 ? (
-            recentGroups.map((group) => (
-              <GroupItem
-                key={group.id}
-                group={group}
-                onPress={() => router.push(`/groups/${group.id}`)}
-              />
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No groups yet</Text>
-          )}
-        </View>
+        {/* {activeTrip && (
+          <FeaturedTripCard 
+            trip={activeTrip} 
+            onViewDetails={() => handleViewDetails(activeTrip.id)} 
+          />
+        )}
         
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Friends</Text>
-            <Button
-              title="See all"
-              onPress={() => router.push("/friends")}
-              variant="outline"
-              size="small"
-              icon={<ArrowRight size={14} color={colors.primary} />}
-            />
-          </View>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Upcoming Trips</Text>
           
-          {friends.length > 0 ? (
-            friends.map((friend) => (
-              <FriendItem
-                key={friend.id}
-                friend={friend}
-                onPress={() => router.push(`/friends/${friend.id}`)}
-              />
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No friends yet</Text>
+          {upcomingTrips.map(trip => (
+            <UpcomingTripItem 
+              key={trip.id} 
+              trip={trip} 
+              onPress={() => handleViewDetails(trip.id)} 
+            />
+          ))}
+          
+          {upcomingTrips.length === 0 && (
+            <Text style={styles.emptyText}>No upcoming trips planned</Text>
           )}
+        </View> */}
+        
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.quickActions}>
+            <TouchableOpacity 
+              style={styles.quickActionButton}
+              // onPress={() => showNotification('Friend management coming soon', 'info')}
+            >
+              <UserPlus size={20} color={colors.text} />
+              <Text style={styles.quickActionText}>Add Friends</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.quickActionButton}
+              onPress={handleSettleUp}
+            >
+              <DollarSign size={20} color={colors.text} />
+              <Text style={styles.quickActionText}>Settle Up</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -168,51 +172,71 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
   greeting: {
     fontSize: 24,
-    fontWeight: "700",
+    fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 4,
   },
   subGreeting: {
     fontSize: 16,
     color: colors.textSecondary,
+    marginTop: 4,
   },
-  balanceContainer: {
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  notificationButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  userAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  sectionContainer: {
+    marginTop: 24,
     paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  actionsContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    marginBottom: 24,
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-  },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    color: colors.text,
+    fontWeight: '600',
+    marginBottom: 16,
   },
   emptyText: {
-    textAlign: "center",
     color: colors.textSecondary,
+    fontSize: 16,
+    textAlign: 'center',
     paddingVertical: 20,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  quickActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  quickActionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 8,
   },
 });

@@ -8,7 +8,7 @@ interface GroupState {
   isLoading: boolean;
   error: string | null;
   fetchGroups: (userId: string) => Promise<void>;
-  fetchGroupById: (groupId: string) => Promise<void>;
+  fetchGroupById: (groupId: string) => Promise<Group>;
   createGroup: (groupData: Partial<Group>) => Promise<Group>;
   updateGroup: (groupId: string, groupData: Partial<Group>) => Promise<Group>;
   deleteGroup: (groupId: string) => Promise<void>;
@@ -41,11 +41,13 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     try {
       const group = await groupService.getGroupById(groupId);
       set({ currentGroup: group, isLoading: false });
+      return group;
     } catch (error) {
       set({ 
         isLoading: false, 
         error: error instanceof Error ? error.message : "Failed to fetch group" 
       });
+      throw error;
     }
   },
   

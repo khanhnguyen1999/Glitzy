@@ -20,7 +20,6 @@ import { swaggerUi, swaggerSpec } from './swagger';
 import { Server as SocketIOServer } from 'socket.io';
 import { setupExpenseModule } from '@modules/expense/module';
 import { MessageModule } from '@modules/message/module';
-import { initializeTravelRecommendationModule } from '@modules/travel-recommendations/module';
 
 async function bootServer(port: number) {
   Logger.info(`Starting server in ${config.envName} mode...`);
@@ -56,9 +55,6 @@ async function bootServer(port: number) {
     app.use('/v1/groups', groupsModule);
     app.use('/v1/expense', expenseModule);
     
-    // Initialize travel recommendations module
-    initializeTravelRecommendationModule(app);
-
     app.use('/uploads', serveStatic(path.join(__dirname, '../uploads')));
     app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
     

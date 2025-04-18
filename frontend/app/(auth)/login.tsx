@@ -18,6 +18,17 @@ import { Button } from "@/components/Button";
 import { Mail, Lock } from "lucide-react-native";
 import { useAuthStore } from "@/store/authStore";
 
+
+import { 
+
+  TextInput, 
+
+} from 'react-native';
+import { Stack } from 'expo-router';
+import { colors } from '@/constants/colors';
+import { ArrowLeft, Eye, EyeOff, Plane } from 'lucide-react-native';
+
+
 export default function LoginScreen() {
   const router = useRouter();
   const { login, isLoadingUser: isLoadingUser } = useAuthStore();
@@ -26,6 +37,10 @@ export default function LoginScreen() {
   
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  const [email, setEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  
   
   const handleLogin = async () => {
     if (!username.trim()) {
@@ -45,153 +60,255 @@ export default function LoginScreen() {
       setLoginError({ message: error instanceof Error ? error.message : 'Login failed. Please try again.' });
     }
   };
+
+  const handleForgotPassword = () => {
+    // showNotification('Password reset feature coming soon', 'info');
+  };
   
+  const handleSocialLogin = (provider: string) => {
+    // showNotification(`${provider} login coming soon`, 'info');
+  };
+
   return (
-    <KeyboardAvoidingView 
-      style={styles.keyboardAvoid}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
+    <SafeAreaView style={styles.container}>
+      <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
+      />
+      
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidView}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={24} color={colors?.text} />
+          </TouchableOpacity>
+          
+          <Text style={styles.title}>Login</Text>
+          
           <View style={styles.logoContainer}>
-            <Image 
-              source={{ uri: "https://images.unsplash.com/photo-1580048915913-4f8f5cb481c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" }}
-              style={styles.logo}
-            />
+            <View style={styles.logoBackground}>
+              <Plane size={40} color="#1A1A1A" />
+            </View>
           </View>
           
-          <Text style={[styles.title, { color: colors.text }]}>Welcome Back</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Sign in to continue</Text>
-          
-          <View style={styles.form}>
-            <Input
-              label="Username"
-              placeholder="Enter your username"
-              value={username}
-              onChangeText={setUsername}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              leftIcon={<Mail size={20} color={colors.textSecondary} />}
-            />
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Username</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="username"
+                value={username}
+                onChangeText={setUsername}
+                keyboardType="default"
+                autoCapitalize="none"
+              />
+            </View>
             
-            <Input
-              label="Password"
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              leftIcon={<Lock size={20} color={colors.textSecondary} />}
-            />
-            
-            {loginError && (
-              <Text style={[styles.errorText, { color: colors.error }]}>{loginError.message}</Text>
-            )}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="••••••••"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color={colors?.textSecondary} />
+                  ) : (
+                    <Eye size={20} color={colors?.textSecondary} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.forgotPasswordButton}
+                onPress={handleForgotPassword}
+              >
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </View>
             
             <TouchableOpacity 
-              style={styles.forgotPassword}
-            //   onPress={() => router.push("/auth/forgot-password")}
+              style={styles.loginButton}
+              onPress={handleLogin}
             >
-              <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>Forgot Password?</Text>
+              <Text style={styles.loginButtonText}>Login</Text>
             </TouchableOpacity>
             
-            <Button
-              title="Sign In"
-              onPress={handleLogin}
-              loading={isLoadingUser}
-              style={styles.loginButton}
-              size="large"
-            />
-          </View>
-          
-          <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: colors.textSecondary }]}>Don't have an account?</Text>
-            <TouchableOpacity onPress={() => router.push("/(auth)/signup")}>
-              <Text style={[styles.signupText, { color: colors.primary }]}>Sign Up</Text>
+            <View style={styles.dividerContainer}>
+              <View style={styles.divider} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.divider} />
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.socialButton}
+              onPress={() => handleSocialLogin('Google')}
+            >
+              <View style={styles.socialIconContainer}>
+                <Text style={styles.socialIcon}>G</Text>
+              </View>
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
             </TouchableOpacity>
+            
+            <View style={styles.signupContainer}>
+              <Text style={styles.signupText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+                <Text style={styles.signupLink}>Sign up</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoid: {
-    flex: 1,
-  },
   container: {
     flex: 1,
+    backgroundColor: colors.background,
   },
-  scrollView: {
+  keyboardAvoidView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
+    flexGrow: 1,
+    padding: 20,
   },
-  logoContainer: {
-    alignItems: "center",
-    marginTop: 40,
-    marginBottom: 40,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 20,
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 8,
-    textAlign: "center",
+    fontWeight: 'bold',
+    marginBottom: 30,
   },
-  subtitle: {
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoBackground: {
+    width: 100,
+    height: 100,
+    backgroundColor: '#F2F2F2',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  formContainer: {
+    width: '100%',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
     fontSize: 16,
-    marginBottom: 32,
-    textAlign: "center",
-  },
-  form: {
-    marginBottom: 24,
-  },
-  errorText: {
-    marginTop: 8,
+    fontWeight: '500',
     marginBottom: 8,
   },
-  forgotPassword: {
-    alignSelf: "flex-end",
-    marginBottom: 24,
+  input: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+  },
+  eyeButton: {
+    padding: 16,
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
   },
   forgotPasswordText: {
-    fontWeight: "600",
+    color: colors.textSecondary,
+    fontSize: 14,
   },
   loginButton: {
-    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 30,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 10,
   },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 16,
+  loginButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
-  footerText: {
-    marginRight: 4,
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 30,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: colors.textSecondary,
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 30,
+    padding: 16,
+    marginBottom: 16,
+  },
+  socialIconContainer: {
+    marginRight: 10,
+  },
+  socialIcon: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  socialButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  signupContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
   },
   signupText: {
-    fontWeight: "600",
+    color: colors.textSecondary,
   },
-  demoContainer: {
-    marginTop: 40,
-    padding: 16,
-    borderRadius: 12,
-  },
-  demoTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  demoText: {
-    marginBottom: 4,
+  signupLink: {
+    color: colors.primary,
+    fontWeight: '600',
   },
 });

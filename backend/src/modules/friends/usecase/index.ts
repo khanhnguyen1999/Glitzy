@@ -4,6 +4,7 @@ import { ErrCannotSendRequestToSelf, ErrFriendAlreadyAccepted, ErrFriendAlreadyR
 import { Requester, UserRole } from '@shared/interface';
 import { Paginated, PagingDTO } from '@shared/model';
 import { AppError, ErrNotFound } from '@shared/utils/error';
+import prisma from '@shared/components/prisma';
 import { v7 } from 'uuid';
 
 export class FriendUseCase implements IFriendUseCase {
@@ -137,9 +138,109 @@ export class FriendUseCase implements IFriendUseCase {
     return await this.repository.findFriendsByUserId(requester.sub, paging);
   }
   
+  async getFriendsByStatus(requester: Requester, status: FriendStatus, paging: PagingDTO): Promise<Paginated<FriendResponseDTO>> {
+    // Get friends with the specified status
+    const friends = await this.repository.findFriendRequestsByUserIdAndStatus(requester.sub, status);
+    
+    // Get user details for each friend
+    const friendsWithDetails = await Promise.all(
+      friends.map(async (friend) => {
+        // Determine which ID is the friend's ID (not the requester's ID)
+        const friendId = friend.userId === requester.sub ? friend.friendId : friend.userId;
+        
+        // Get user details from the repository
+        const userDetails = await prisma.users.findUnique({ where: { id: friendId } });
+        
+        if (!userDetails) return null;
+        
+        return {
+          ...friend,
+          friend: {
+            id: userDetails.id,
+            username: userDetails.username,
+            firstName: userDetails.firstName,
+            lastName: userDetails.lastName,
+            avatar: userDetails.avatar
+          }
+        } as FriendResponseDTO;
+      })
+    );
+    
+    // Filter out any null values (in case a user was not found)
+    const validFriends = friendsWithDetails.filter(Boolean) as FriendResponseDTO[];
+    
+    // Apply pagination manually since we're not using the repository's pagination
+    const skip = (paging.page - 1) * paging.limit;
+    const paginatedFriends = validFriends.slice(skip, skip + paging.limit);
+    
+    return {
+      data: paginatedFriends,
+      paging,
+      total: validFriends.length
+    };
+  }
+  
+  async getAllFriendsWithStatus(requester: Requester, paging: PagingDTO): Promise<{
+    pending: FriendResponseDTO[];
+    accepted: FriendResponseDTO[];
+    rejected: FriendResponseDTO[];
+  }> {
+    // Get all friends with all statuses
+    const pendingFriends = await this.repository.findFriendRequestsByUserIdAndStatus(requester.sub, FriendStatus.PENDING);
+    const acceptedFriends = await this.repository.findFriendRequestsByUserIdAndStatus(requester.sub, FriendStatus.ACCEPTED);
+    const rejectedFriends = await this.repository.findFriendRequestsByUserIdAndStatus(requester.sub, FriendStatus.REJECTED);
+    
+    // Helper function to add user details to friend records
+    const addUserDetails = async (friends: Friend[]) => {
+      const friendsWithDetails = await Promise.all(
+        friends.map(async (friend) => {
+          // Determine which ID is the friend's ID (not the requester's ID)
+          const friendId = friend.userId === requester.sub ? friend.friendId : friend.userId;
+          
+          // Get user details from the repository
+          const userDetails = await prisma.users.findUnique({ where: { id: friendId } });
+          
+          if (!userDetails) return null;
+          
+          return {
+            ...friend,
+            friend: {
+              id: userDetails.id,
+              username: userDetails.username,
+              firstName: userDetails.firstName,
+              lastName: userDetails.lastName,
+              avatar: userDetails.avatar
+            }
+          } as FriendResponseDTO;
+        })
+      );
+      
+      // Filter out any null values (in case a user was not found)
+      return friendsWithDetails.filter(Boolean) as FriendResponseDTO[];
+    };
+    
+    // Process all friend types in parallel
+    const [pendingWithDetails, acceptedWithDetails, rejectedWithDetails] = await Promise.all([
+      addUserDetails(pendingFriends),
+      addUserDetails(acceptedFriends),
+      addUserDetails(rejectedFriends)
+    ]);
+    
+    return {
+      pending: pendingWithDetails,
+      accepted: acceptedWithDetails,
+      rejected: rejectedWithDetails
+    };
+  }
+  
   async searchFriends(requester: Requester, searchData: FriendSearchDTO, paging: PagingDTO): Promise<Paginated<FriendResponseDTO>> {
     const dto = friendSearchDTOSchema.parse(searchData);
     return await this.repository.searchFriendsByNameOrEmail(requester.sub, dto, paging);
+  }
+  
+  async searchNonFriends(requester: Requester, searchData: FriendSearchDTO, paging: PagingDTO): Promise<Paginated<FriendResponseDTO>> {
+    const dto = friendSearchDTOSchema.parse(searchData);
+    return await this.repository.searchNonFriendsByNameOrEmail(requester.sub, dto, paging);
   }
   
   async getMutualFriends(requester: Requester, userId: string, paging: PagingDTO): Promise<Paginated<FriendResponseDTO>> {

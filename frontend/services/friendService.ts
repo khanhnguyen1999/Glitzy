@@ -12,6 +12,28 @@ export const friendService = {
     return response.data;
   },
   
+  getFriendRequests: async () => {
+    // Get pending friend requests
+    const response = await api.get('/v1/friends/status/pending');
+    return response.data;
+  },
+  
+  getAllFriendsWithStatus: async () => {
+    // Get all friends with their statuses (pending, accepted, rejected)
+    const response = await api.get('/v1/friends/all-with-status');
+    return response.data;
+  },
+  
+  acceptFriendRequest: async (requestId: string) => {
+    const response = await api.post(`/v1/friends/accept/${requestId}`);
+    return response.data;
+  },
+  
+  rejectFriendRequest: async (requestId: string) => {
+    const response = await api.post(`/v1/friends/reject/${requestId}`);
+    return response.data;
+  },
+  
   getFriendById: async (friendId: string) => {
     // Simulate API call
     await delay(500);
@@ -26,29 +48,9 @@ export const friendService = {
   },
   
   addFriend: async (userId: string) => {
-    // Simulate API call
-    await delay(1000);
-    
-    const user = mockUsers.find(u => u.id === userId);
-    
-    if (!user) {
-      throw new Error("User not found");
-    }
-    
-    // Check if already friends
-    if (mockFriends.some(f => f.friend.id === userId)) {
-      throw new Error("Already friends with this user");
-    }
-    
-    // Create new friend relationship
-    const newFriend: any = {
-      id: `friend${mockFriends.length + 1}`,
-      user,
-      balance: 0,
-      addedAt: new Date().toISOString(),
-    };
-    
-    return newFriend;
+    // Send friend request to the API
+    const response = await api.post('/v1/friends/request', { friendId: userId });
+    return response.data;
   },
   
   removeFriend: async (friendId: string) => {
@@ -71,8 +73,19 @@ export const friendService = {
     return { balance: friend.balance };
   },
   
-  searchUsers: async (query: string) => {
-    const response = await api.get(`/v1/friends/search?name=${query}`);
+  searchFriends: async (query: string) => {
+    const response = await api.get(`/v1/friends/search?query=${encodeURIComponent(query)}`);
     return response.data.data;
+  },
+  
+  searchNonFriends: async (query: string) => {
+    // This endpoint specifically searches for users who are not already friends
+    const response = await api.get(`/v1/friends/users/search/non-friends?query=${encodeURIComponent(query)}`);
+    return response.data;
+  },
+  
+  searchUsers: async (query: string) => {
+    const response = await api.get(`/v1/users?query=${encodeURIComponent(query)}`);
+    return response.data;
   },
 };

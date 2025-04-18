@@ -1,66 +1,36 @@
+// Color palette for the app
 export const colors = {
-  primary: "#2980b9", // Soft blue
-  secondary: "#6BBF59", // Soft green
-  background: "#FFFFFF",
-  card: "#F8F9FA",
-  text: "#333333",
-  textSecondary: "#6C757D",
-  border: "#E9ECEF",
-  notification: "#FF6B6B",
-  success: "#28A745",
-  warning: "#FFC107",
-  danger: "#DC3545",
-  inactive: "#ADB5BD",
-  lightGray: "#F1F3F5",
-  white: "#FFFFFF",
-  black: "#000000",
-  transparent: "transparent",
-};
+  // Main colors
+  primary: '#000000',
+  secondary: '#5E5CE6',
+  background: '#F8F8F8',
+  card: '#FFFFFF',
+  text: '#000000',
+  textSecondary: '#6B6B6B',
+  textTertiary: '#A1A1A1',
+  
+  // UI elements
+  border: '#E5E5E5',
+  separator: '#EEEEEE',
+  highlight: '#5E5CE6',
+  success: '#34C759',
+  error: '#FF3B30',
+  
+  // Tab bar
+  tabBar: '#FFFFFF',
+  tabBarInactive: '#8E8E93',
+  
+  // Expense card
+  expenseCard: '#000000',
+  expenseCardText: '#FFFFFF',
+  
+  // Buttons
+  buttonPrimary: '#000000',
+  buttonSecondary: '#F2F2F7',
+  buttonText: '#FFFFFF',
+  buttonTextSecondary: '#000000',
 
-export const lightColors = {
-  primary: "#5E60CE",
-  primaryLight: "#E4E4FB",
-  secondary: "#64DFDF",
-  secondaryLight: "#E0F7F7",
-  background: "#F7F7F9",
-  card: "#F0F0F5",
-  text: "#1A1A2E",
-  textSecondary: "#6E6E87",
-  border: "#E0E0E6",
-  divider: "#EBEBF0",
-  error: "#FF5A5A",
-  success: "#4CAF50",
-  warning: "#FFC107",
-  food: "#FF9800",
-  transport: "#2196F3",
-  shopping: "#E91E63",
-  entertainment: "#9C27B0",
-  home: "#4CAF50",
-  travel: "#03A9F4",
-  health: "#F44336",
-  other: "#607D8B",
-};
 
-export const darkColors = {
-  primary: "#7B7CDB",
-  primaryLight: "#2D2D45",
-  secondary: "#64DFDF",
-  secondaryLight: "#1E3535",
-  background: "#121212",
-  card: "#1E1E1E",
-  text: "#FFFFFF",
-  textSecondary: "#AAAABC",
-  border: "#2C2C3A",
-  divider: "#2C2C3A",
-  error: "#FF5A5A",
-  success: "#66BB6A",
-  warning: "#FFCA28",
-  food: "#FFB74D",
-  transport: "#64B5F6",
-  shopping: "#F06292",
-  entertainment: "#BA68C8",
-  home: "#81C784",
-  travel: "#4FC3F7",
-  health: "#E57373",
-  other: "#90A4AE",
+  white: '#FFFFFF',
+  danger: '#FF3B30',
 };

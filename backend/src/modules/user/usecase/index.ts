@@ -80,9 +80,9 @@ export class UserUseCase implements IUserUseCase {
     const hashPassword = await bcrypt.hash(`${dto.password}.${salt}`, 10);
     const avatar = (async () => {
       const { createAvatar } = await import('@dicebear/core');
-      const { notionistsNeutral } = await import('@dicebear/collection');
+      const { lorelei } = await import('@dicebear/collection');
     
-      const avatar = createAvatar(notionistsNeutral, {
+      const avatar = createAvatar(lorelei, {
         seed: data.username,
         size: 64,
       });
