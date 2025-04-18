@@ -144,6 +144,7 @@ export class FriendHTTPService extends BaseHttpService<Friend, FriendRequestDTO,
     const status = req.params.status as FriendStatus;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const userId = requester.sub;
     
     // Validate status parameter
     if (!Object.values(FriendStatus).includes(status)) {
@@ -152,6 +153,17 @@ export class FriendHTTPService extends BaseHttpService<Friend, FriendRequestDTO,
     
     const paging: PagingDTO = { page, limit };
     const result = await this.usecase.getFriendsByStatus(requester, status, paging);
+    
+    // Filter out any records where the user is both the requester and the friend
+    if (result.data) {
+      result.data = result.data.filter(friend => {
+        // Exclude cases where userId equals friendId (user is friends with themselves)
+        return friend.userId !== userId;
+      });
+      // Update total count after filtering
+      result.total = result.data.length;
+    }
+    
     successResponse(result, res);
   }
   
