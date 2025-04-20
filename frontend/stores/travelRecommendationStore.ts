@@ -10,6 +10,12 @@ export interface TravelRecommendation {
   address?: string;
   imageUrl?: string;
   status: 'todo' | 'completed' | 'rejected';
+  // Additional properties for enhanced UI
+  rating?: number;
+  votes?: number;
+  image?: string; // Fallback for imageUrl
+  latitude?: number;
+  longitude?: number;
 }
 
 interface TravelRecommendationState {

@@ -2,6 +2,7 @@ import axios from 'axios';
 import { API_URL, ENDPOINTS } from '../constants/api';
 import { Location, LocationRecommendationParams } from '../types/location';
 import { ItineraryGenerationParams, TripItinerary } from '../types/itinerary';
+import api from "./api";
 
 // Configure axios with auth token
 const getAuthHeader = () => {
@@ -14,27 +15,23 @@ const getAuthHeader = () => {
 };
 
 /**
- * Get location recommendations based on destination
+ * Get location recommendations based on destination and trip type
  */
 export const getLocationRecommendations = async (
   destination: string, 
-  interests: string[] = []
+  tripType: string = 'General'
 ): Promise<Location[]> => {
   try {
-    const url = ENDPOINTS.LOCATIONS.replace(':destination', encodeURIComponent(destination));
-    const interestsParam = interests.length > 0 ? `?interests=${interests.join(',')}` : '';
-    
-    const response = await axios.get(
-      `${API_URL}${url}${interestsParam}`, 
-      getAuthHeader()
-    );
-    
+    const response = await api.post(`/v1/groups/recommendations`,{
+      location: destination,
+      tripType
+    });
     return response.data;
   } catch (error) {
     console.error('Error fetching location recommendations:', error);
     
     // Return mock data for development
-    return getMockLocationRecommendations(destination);
+    return getMockLocationRecommendations(destination, tripType);
   }
 };
 
@@ -45,12 +42,7 @@ export const generateItinerary = async (
   params: ItineraryGenerationParams
 ): Promise<TripItinerary> => {
   try {
-    const response = await axios.post(
-      `${API_URL}${ENDPOINTS.ITINERARY}`, 
-      params, 
-      getAuthHeader()
-    );
-    
+    const response = await api.post(`/v1/groups/recommendations`,params);
     return response.data;
   } catch (error) {
     console.error('Error generating itinerary:', error);
@@ -63,7 +55,20 @@ export const generateItinerary = async (
 /**
  * Mock location recommendations for development
  */
-const getMockLocationRecommendations = (destination: string): Location[] => {
+const getMockLocationRecommendations = (destination: string, tripType: string = 'General'): Location[] => {
+  // Generate recommendations based on trip type
+  const getDescription = (name: string, type: string) => {
+    const descriptions: Record<string, string> = {
+      'Relax & Wellness': `${name} is a perfect spot to unwind and rejuvenate. Visitors can enjoy peaceful surroundings and wellness activities.`,
+      'Adventure & Exploration': `${name} offers thrilling adventures and exciting exploration opportunities for the adventurous traveler.`,
+      'Culture & Learning': `${name} provides a rich cultural experience with opportunities to learn about local history and traditions.`,
+      'Food & Shopping': `${name} is famous for its culinary delights and shopping opportunities that showcase local crafts and products.`,
+      'Work & Entertainment': `${name} combines productive work spaces with entertainment options for a balanced business trip.`,
+      'General': `${name} is a must-visit destination in ${destination} with activities for all interests.`
+    };
+    return descriptions[type] || descriptions['General'];
+  };
+
   return [
     {
       id: 'loc-1',
@@ -73,9 +78,10 @@ const getMockLocationRecommendations = (destination: string): Location[] => {
       longitude: 139.7671,
       category: 'Museum',
       rating: 4.7,
+      votes: 328,
       estimatedTimeRequired: 120,
-      description: `The ${destination} Museum of Art houses an impressive collection of both local and international artwork.`,
-      imageUrl: 'https://picsum.photos/400/300?random=1',
+      description: getDescription(`${destination} Museum of Art`, tripType),
+      imageUrl: 'https://images.unsplash.com/photo-1566054757965-8c4085344c96?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MTB8fG11c2V1bXxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60',
       openingHours: {
         open: '09:00',
         close: '17:00',
@@ -90,9 +96,10 @@ const getMockLocationRecommendations = (destination: string): Location[] => {
       longitude: 139.7063,
       category: 'Park',
       rating: 4.8,
+      votes: 452,
       estimatedTimeRequired: 90,
-      description: `${destination} Central Park offers beautiful walking paths, gardens, and recreational areas.`,
-      imageUrl: 'https://picsum.photos/400/300?random=2',
+      description: getDescription(`${destination} Central Park`, tripType),
+      imageUrl: 'https://images.unsplash.com/photo-1534251369789-5067c8b8602a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MTB8fHBhcmt8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60',
       openingHours: {
         open: '06:00',
         close: '22:00',
@@ -107,9 +114,10 @@ const getMockLocationRecommendations = (destination: string): Location[] => {
       longitude: 139.7454,
       category: 'Landmark',
       rating: 4.9,
+      votes: 387,
       estimatedTimeRequired: 60,
-      description: `The iconic ${destination} Tower offers panoramic views of the entire city.`,
-      imageUrl: 'https://picsum.photos/400/300?random=3',
+      description: getDescription(`${destination} Tower`, tripType),
+      imageUrl: 'https://images.unsplash.com/photo-1495562569060-2eec283d3391?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8dG93ZXJ8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60',
       openingHours: {
         open: '10:00',
         close: '22:00',
@@ -124,9 +132,10 @@ const getMockLocationRecommendations = (destination: string): Location[] => {
       longitude: 139.7751,
       category: 'Museum',
       rating: 4.6,
+      votes: 276,
       estimatedTimeRequired: 150,
-      description: `Learn about the rich history of ${destination} through interactive exhibits and artifacts.`,
-      imageUrl: 'https://picsum.photos/400/300?random=4',
+      description: getDescription(`${destination} Historical Museum`, tripType),
+      imageUrl: 'https://images.unsplash.com/photo-1582034986517-30d163aa1da9?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8aGlzdG9yeXxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60',
       openingHours: {
         open: '09:00',
         close: '18:00',
@@ -141,9 +150,10 @@ const getMockLocationRecommendations = (destination: string): Location[] => {
       longitude: 139.7489,
       category: 'Park',
       rating: 4.7,
+      votes: 312,
       estimatedTimeRequired: 120,
-      description: `The ${destination} Botanical Garden features thousands of plant species from around the world.`,
-      imageUrl: 'https://picsum.photos/400/300?random=5',
+      description: getDescription(`${destination} Botanical Garden`, tripType),
+      imageUrl: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8Z2FyZGVufGVufDB8fDB8fA%3D%3D&auto=format&fit=crop&w=800&q=60',
       openingHours: {
         open: '08:00',
         close: '19:00',
@@ -158,9 +168,10 @@ const getMockLocationRecommendations = (destination: string): Location[] => {
       longitude: 139.7038,
       category: 'Food',
       rating: 4.8,
+      votes: 425,
       estimatedTimeRequired: 90,
-      description: `Experience the local cuisine at the famous ${destination} Food Market.`,
-      imageUrl: 'https://picsum.photos/400/300?random=6',
+      description: getDescription(`${destination} Food Market`, tripType),
+      imageUrl: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8OHx8Zm9vZCUyMG1hcmtldHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=800&q=60',
       openingHours: {
         open: '10:00',
         close: '20:00',

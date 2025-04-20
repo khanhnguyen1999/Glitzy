@@ -45,5 +45,9 @@ export const setupGroupsModule = (sctx: ServiceContext) => {
   // Optional: Group summary/balance info
   router.get('/:groupId/summary', mdlFactory.auth, httpService.getGroupSummaryAPI.bind(httpService));
 
+
+  router.post('/recommendations', mdlFactory.auth, httpService.generateRecommendationsAPI.bind(httpService));
+  router.get('/locations/search', mdlFactory.auth, httpService.searchLocationsAPI.bind(httpService));
+
   return router;
 };

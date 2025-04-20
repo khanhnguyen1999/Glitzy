@@ -30,6 +30,8 @@ export type FriendRequestDTO = z.infer<typeof friendRequestDTOSchema>;
 // DTO for updating a friend request status
 export const friendUpdateDTOSchema = z.object({
   status: z.nativeEnum(FriendStatus),
+  userId: z.string().uuid().optional(),
+  friendId: z.string().uuid().optional(),
 });
 
 export type FriendUpdateDTO = z.infer<typeof friendUpdateDTOSchema>;

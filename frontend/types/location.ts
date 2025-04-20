@@ -6,6 +6,7 @@ export interface Location {
   longitude: number;
   category: string;
   rating: number;
+  votes?: number; // Number of votes/reviews
   openingHours?: {
     open: string;
     close: string;
@@ -14,6 +15,9 @@ export interface Location {
   estimatedTimeRequired?: number; // in minutes
   description?: string;
   imageUrl?: string;
+  // For compatibility with TravelRecommendation
+  status?: string;
+  image?: string;
 }
 
 export interface LocationRecommendationParams {

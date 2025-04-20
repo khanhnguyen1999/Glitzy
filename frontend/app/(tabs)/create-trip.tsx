@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import useDebounce from '../../hooks/useDebounce';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
@@ -9,11 +10,14 @@ import { useFriendStore } from '../../store/friendStore';
 import { useUserStore } from '../../store/userStore';
 import { createTripGroup } from '../../services/tripService';
 import { getLocationRecommendations } from '../../services/recommendationService';
+import { groupService } from '../../services/groupService';
 import FriendSelector from '../../components/FriendSelector';
 import LocationCard from '../../components/LocationCard';
 import { Location } from '../../types/location';
+import { LocationSearchResult } from '../../services/groupService';
 import { Sparkles } from 'lucide-react-native';
-
+import DatePicker from 'react-native-date-picker'
+// import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 
 import { 
   StyleSheet, 
@@ -24,6 +28,7 @@ import { Stack } from 'expo-router';
 import { colors } from '@/constants/colors';
 import { ArrowLeft, Search, X, Plus, Check } from 'lucide-react-native';
 import { SuggestedPlace } from '@/components/SuggestedPlace';
+import { TravelRecommendation } from '@/stores/travelRecommendationStore';
 
 
 export default function CreateTripScreen() {
@@ -31,20 +36,22 @@ export default function CreateTripScreen() {
   const { friends } = useFriendStore();
   const { user } = useUserStore();
   const [loading, setLoading] = useState(false);
-  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [recommendedLocations, setRecommendedLocations] = useState<Location[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<Location[]>([]);
   const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(null);
   const [showTripTypeDropdown, setShowTripTypeDropdown] = useState(false);
+  const [recommendations, setRecommendations] = useState<TravelRecommendation[]>([]);
+  const [selectedRecommendations, setSelectedRecommendations] = useState<Set<number>>(new Set());
 
 
 
   const [tripName, setTripName] = useState('');
   const [destination, setDestination] = useState('');
-  const [tripType, setTripType] = useState('Relax & Wellness');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [tripType, setTripType] = useState('Work & Entertainment');
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
 
   const [selectedPlaces, setSelectedPlaces] = useState<string[]>([]);
   
@@ -78,33 +85,34 @@ export default function CreateTripScreen() {
   };
 
   const handleCreateTrip = async (data: any) => {
-    if (selectedFriends.length === 0) {
-      Alert.alert('Error', 'Please select at least one friend');
-      return;
-    }
+    console.log('tripData ',selectedFriends)
 
-    if (selectedLocations.length === 0) {
-      Alert.alert('Error', 'Please select at least one location');
-      return;
-    }
+    // if (selectedFriends.length === 0) {
+    //   Alert.alert('Error', 'Please select at least one friend');
+    //   return;
+    // }
+
+    // if (selectedLocations.length === 0) {
+    //   Alert.alert('Error', 'Please select at least one location');
+    //   return;
+    // }
 
     setLoading(true);
     try {
       const tripData = {
-        ...data,
-        startDate: data.startDate.toISOString().split('T')[0],
-        endDate: data.endDate.toISOString().split('T')[0],
+        startDate: new Date(),
+        endDate: new Date(),
         memberIds: [...selectedFriends, user?.id],
         selectedLocations,
         tripType: tripType // Include the trip type
       };
-
-      const response = await createTripGroup(tripData);
-      Alert.alert('Success', 'Trip created successfully!');
-      router.push({ 
-        pathname: '/trip/[id]',
-        params: { id: response.id }
-      });
+      console.log('tripData ',tripData)
+      // const response = await createTripGroup(tripData);
+      // Alert.alert('Success', 'Trip created successfully!');
+      // router.push({ 
+      //   pathname: '/trip/[id]',
+      //   params: { id: response.id }
+      // });
     } catch (error) {
       console.error('Error creating trip:', error);
       Alert.alert('Error', 'Failed to create trip');
@@ -113,8 +121,110 @@ export default function CreateTripScreen() {
     }
   };
 
+  // State variables are already declared above
 
+  const handleLocationSearch = useCallback(async (query: string) => {
+    if (query.length < 3) return;
+    
+    setIsSearching(true);
+    try {
+      const results = await groupService.searchLocations(query);
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Error searching locations:', error);
+      Alert.alert('Error', 'Failed to search locations');
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
   
+  // This useEffect will be moved after state declarations
+
+  const generateRecommendations = async () => {
+    if (!destination) {
+      Alert.alert('Error', 'Please enter a destination first');
+      return;
+    }
+    
+    setLoadingRecommendations(true);
+    try {
+      const result = await getLocationRecommendations(destination, tripType);
+      // Transform Location[] to TravelRecommendation[] by adding the required status property
+      const recommendationsWithStatus = result.map(location => ({
+        ...location,
+        status: 'todo' as const,
+        // Ensure image is available for the SuggestedPlace component
+        image: location.imageUrl || 'https://images.unsplash.com/photo-1533929736458-ca588d08c8be?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8bG9jYXRpb258ZW58MHx8MHx8&w=1000&q=80'
+      }));
+      setRecommendations(recommendationsWithStatus);
+      // Select all recommendations by default
+      const allIndices = new Set(recommendationsWithStatus.map((_, index: number) => index));
+      setSelectedRecommendations(allIndices as Set<number>);
+      
+      // Also update selectedLocations with the selected recommendations
+      // Convert TravelRecommendation[] to Location[] for selectedLocations
+      const locationsData = recommendationsWithStatus.map(rec => ({
+        id: rec.id,
+        name: rec.name,
+        address: rec.address || '',
+        latitude: 0, // Default values for required Location properties
+        longitude: 0,
+        category: '',
+        rating: rec.rating || 4.5,
+        description: rec.description,
+        imageUrl: rec.imageUrl
+      }));
+      setSelectedLocations(locationsData);
+    } catch (error) {
+      console.error("Failed to generate recommendations:", error);
+      Alert.alert('Error', 'Failed to generate recommendations');
+    } finally {
+      setLoadingRecommendations(false);
+    }
+  };
+  
+  const toggleRecommendation = (index: number) => {
+    const newSelected = new Set(selectedRecommendations);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedRecommendations(newSelected);
+    
+    // Update selectedLocations based on selected indices
+    const newSelectedLocations = recommendations
+      .filter((_, idx) => newSelected.has(idx))
+      .map(rec => ({
+        id: rec.id,
+        name: rec.name,
+        address: rec.address || '',
+        latitude: 0, // Default values for required Location properties
+        longitude: 0,
+        category: '',
+        rating: rec.rating || 4.5,
+        description: rec.description,
+        imageUrl: rec.imageUrl
+      }));
+    setSelectedLocations(newSelectedLocations);
+  };
+  const [isFocused, setIsFocused] = useState(false);
+  const [address, setAddress] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<LocationSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // Use the custom useDebounce hook
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  
+  // Effect to trigger search when debounced query changes
+  useEffect(() => {
+    if (debouncedSearchQuery.length >= 3) {
+      handleLocationSearch(debouncedSearchQuery);
+    } else {
+      setSearchResults([]);
+    }
+  }, [debouncedSearchQuery, handleLocationSearch]);
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen
@@ -147,14 +257,43 @@ export default function CreateTripScreen() {
         
         <View style={styles.formGroup}>
           <Text style={styles.label}>Destination</Text>
-          <View style={styles.searchInputContainer}>
-            <Search size={20} color={colors.textSecondary} style={styles.searchIcon} />
+          <View style={{ width: "100%" }}>
             <TextInput
-              style={styles.searchInput}
-              placeholder="Search destination"
-              value={destination}
-              onChangeText={setDestination}
+              style={[styles.input, isFocused && styles.inputFocused]}
+              placeholder="Search for a destination"
+              value={searchQuery}
+              onChangeText={(text) => {
+                setSearchQuery(text);
+              }}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
             />
+            
+            {isSearching && (
+              <View style={styles.searchingIndicator}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.searchingText}>Searching...</Text>
+              </View>
+            )}
+            
+            {searchResults.length > 0 && (
+              <View style={styles.searchResultsContainer}>
+                {searchResults.map((result, index) => (
+                  <TouchableOpacity 
+                    key={result.place_id || index}
+                    style={styles.searchResultItem}
+                    onPress={() => {
+                      setAddress(result.display_name);
+                      setDestination(result.display_name);
+                      setSearchQuery(result.display_name);
+                      setSearchResults([]);
+                    }}
+                  >
+                    <Text style={styles.searchResultText}>{result.display_name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         </View>
 
@@ -200,7 +339,7 @@ export default function CreateTripScreen() {
         <View style={styles.formGroup}>
           <Text style={styles.label}>Dates</Text>
           <View style={styles.dateContainer}>
-            <TextInput
+          {/* <TextInput
               style={styles.dateInput}
               placeholder="Start Date"
               value={startDate}
@@ -209,9 +348,9 @@ export default function CreateTripScreen() {
             <TextInput
               style={styles.dateInput}
               placeholder="End Date"
-              value={endDate}
+              value={destination || ''}
               onChangeText={setEndDate}
-            />
+            /> */}
           </View>
         </View>
         
@@ -243,20 +382,52 @@ export default function CreateTripScreen() {
         
         <View style={styles.formGroup}>
           <View style={styles.suggestedPlacesContainer}>
-            <Text style={styles.label}>Suggested Places</Text>
-            <TouchableOpacity style={styles.regenerateButton}>
+          <Text style={styles.label}>Suggested Places</Text>
+
+
+            <TouchableOpacity 
+              style={styles.regenerateButton}
+              onPress={generateRecommendations}
+            >
               <Sparkles size={16} color="white" />
-              <Text style={styles.regenerateText}>Regenerate</Text>
+              <Text style={styles.regenerateText}>Generate</Text>
             </TouchableOpacity>
           </View>
-            {/* {recommendedLocations.map(place => (
-              <SuggestedPlace
-                key={place.id}
-                place={place}
-                isSelected={selectedPlaces.includes(place.id)}
-                onToggle={() => handleTogglePlace(place.id)}
-              />
-            ))} */}
+
+          {loadingRecommendations ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Generating recommendations for {destination}...</Text>
+            </View>
+          ) : recommendations.length > 0 ? (
+            <View style={styles.recommendationsContainer}>
+              {recommendations.map((recommendation, index) => (
+                <SuggestedPlace
+                  key={recommendation.id || index}
+                  place={{
+                    id: recommendation.id || `rec-${index}`,
+                    name: recommendation.name,
+                    description: recommendation.description || '',
+                    image: recommendation.imageUrl || 'https://images.unsplash.com/photo-1533929736458-ca588d08c8be',
+                    rating: recommendation.rating || 0, // Default rating
+                    votes: recommendation.votes, // Default votes
+                    address: recommendation.address || ''
+                  }}
+                  isSelected={selectedRecommendations.has(index)}
+                  onToggle={() => toggleRecommendation(index)}
+                />
+              ))}
+              <View style={styles.selectedSummary}>
+                <Text style={styles.selectedSummaryText}>
+                  {selectedRecommendations.size} of {recommendations.length} places selected
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.noRecommendationsText}>
+              Click the Generate button to get recommendations based on your destination and trip type
+            </Text>
+          )}
         </View>
         
         <TouchableOpacity 
@@ -274,6 +445,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  searchResultsContainer: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    marginTop: 4,
+    maxHeight: 200,
+    overflow: 'scroll',
+    zIndex: 10,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  searchResultItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  searchResultText: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  searchingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  searchingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  inputFocused: {
+    borderColor: colors.primary,
+    borderWidth: 2,
   },
   header: {
     flexDirection: 'row',
@@ -490,5 +699,64 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 6,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  recommendationsContainer: {
+    marginTop: 10,
+  },
+  recommendationItem: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  recommendationName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+    color: colors.text,
+  },
+  recommendationDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 6,
+  },
+  recommendationAddress: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    fontStyle: 'italic',
+  },
+  noRecommendationsText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 20,
+    marginBottom: 10,
+    paddingHorizontal: 20,
+  },
+  selectedSummary: {
+    marginTop: 10,
+    marginBottom: 10,
+    padding: 12,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  selectedSummaryText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
 });

@@ -1,5 +1,20 @@
 import api from "./api";
 import { Group, User, Expense } from "@/types";
+
+export interface LocationSearchResult {
+  place_id: string;
+  osm_id: string;
+  display_name: string;
+  lat: string;
+  lon: string;
+  address?: {
+    city?: string;
+    country?: string;
+    state?: string;
+  };
+  type?: string;
+  importance?: number;
+}
 import { mockGroups } from "@/mocks/groups";
 import { mockExpenses } from "@/mocks/expenses";
 import { mockUsers } from "@/mocks/users";
@@ -144,5 +159,28 @@ export const groupService = {
     });
 
     return balances;
+  },
+
+  generateRecommendations: async (location: string, tripType: string) => {
+    try {
+      const response = await api.post('/v1/groups/recommendations', {
+        location,
+        tripType
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error generating recommendations:', error);
+      throw error;
+    }
+  },
+  
+  searchLocations: async (query: string, limit: number = 5): Promise<LocationSearchResult[]> => {
+    try {
+      const response = await api.get(`/v1/groups/locations/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error searching locations:', error);
+      throw error;
+    }
   },
 };

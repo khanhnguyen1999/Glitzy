@@ -24,11 +24,20 @@ export class FriendUseCase implements IFriendUseCase {
     
     // Check if a friend request already exists between these users
     const existingRequest = await this.repository.findFriendRequestBetweenUsers(requester.sub, dto.friendId);
+    
     if (existingRequest) {
-      throw AppError.from(ErrFriendRequestAlreadyExists, 400);
+      // If the existing request is rejected, allow creating a new one by updating the status
+      if (existingRequest.status === FriendStatus.REJECTED) {
+        // Update the existing rejected request to pending
+        await this.repository.update(existingRequest.id, { status: FriendStatus.PENDING, userId: requester.sub, friendId: dto.friendId });
+        return existingRequest.id;
+      } else {
+        // For pending or accepted requests, don't allow creating a new one
+        throw AppError.from(ErrFriendRequestAlreadyExists, 400);
+      }
     }
     
-    // Create new friend request
+    // Create new friend request if no existing request was found
     const newId = v7();
     const newFriendRequest: Friend = {
       id: newId,
@@ -37,7 +46,7 @@ export class FriendUseCase implements IFriendUseCase {
       status: FriendStatus.PENDING,
       createdAt: new Date(),
     };
-    
+
     await this.repository.insert(newFriendRequest);
     
     return newId;

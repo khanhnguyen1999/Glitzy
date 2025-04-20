@@ -8,7 +8,10 @@ interface Place {
   name: string;
   description: string;
   image: string;
+  imageUrl?: string; // Support both image and imageUrl
   rating: number;
+  votes?: number;
+  address?: string;
 }
 
 interface SuggestedPlaceProps {
@@ -22,16 +25,22 @@ export const SuggestedPlace: React.FC<SuggestedPlaceProps> = ({
   isSelected,
   onToggle
 }) => {
+  // Use imageUrl if available, otherwise fall back to image
+  const imageSource = place.imageUrl || place.image;
+
   return (
     <View style={styles.container}>
       <Image 
-        source={{ uri: place.image }} 
+        source={{ uri: imageSource }} 
         style={styles.image}
         resizeMode="cover"
       />
       <View style={styles.content}>
         <Text style={styles.name}>{place.name}</Text>
-        <Text style={styles.description}>{place.description}</Text>
+        <Text style={styles.description} numberOfLines={2}>{place.description}</Text>
+        {place.address && (
+          <Text style={styles.address} numberOfLines={1}>{place.address}</Text>
+        )}
         <View style={styles.ratingContainer}>
           <Text style={styles.rating}>{place.rating}</Text>
           <View style={styles.starContainer}>
@@ -47,6 +56,9 @@ export const SuggestedPlace: React.FC<SuggestedPlaceProps> = ({
               </Text>
             ))}
           </View>
+          {place.votes && (
+            <Text style={styles.votes}>({place.votes})</Text>
+          )}
         </View>
       </View>
       <TouchableOpacity 
@@ -69,10 +81,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 16,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   image: {
-    width: 100,
-    height: 100,
+    width: 110,
+    height: 120,
   },
   content: {
     flex: 1,
@@ -83,20 +100,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
+    color: colors.text,
   },
   description: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 8,
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  address: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    fontStyle: 'italic',
+    marginBottom: 6,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   rating: {
     fontSize: 14,
     fontWeight: '600',
     marginRight: 4,
+    color: colors.text,
   },
   starContainer: {
     flexDirection: 'row',
@@ -110,6 +137,11 @@ const styles = StyleSheet.create({
   },
   emptyStar: {
     color: colors.border,
+  },
+  votes: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginLeft: 4,
   },
   checkbox: {
     width: 24,

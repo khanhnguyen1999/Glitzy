@@ -312,8 +312,8 @@ export class PrismaFriendQueryRepository implements IFriendQueryRepository {
   async searchNonFriendsByNameOrEmail(userId: string, query: FriendSearchDTO, paging: PagingDTO): Promise<Paginated<FriendResponseDTO>> {
     const skip = (paging.page - 1) * paging.limit;
     
-    // First get all friend IDs for the user (including pending requests)
-    const friendships = await prisma.friends.findMany({
+    // Get all friendships for the user
+    const allFriendships = await prisma.friends.findMany({
       where: {
         OR: [
           { userId },
@@ -322,21 +322,30 @@ export class PrismaFriendQueryRepository implements IFriendQueryRepository {
       }
     });
     
-    // Extract all user IDs that have any relationship with the current user
-    const relatedUserIds = friendships.map((f: any) => 
+    // Separate friendships by status
+    const pendingOrAcceptedFriendships = allFriendships.filter(f => 
+      f.status === 'pending' || f.status === 'accepted'
+    );
+    
+    const rejectedFriendships = allFriendships.filter(f => 
+      f.status === 'rejected'
+    );
+    
+    // Extract user IDs to exclude (pending or accepted friends + self)
+    const excludedUserIds = pendingOrAcceptedFriendships.map((f: any) => 
+      f.userId === userId ? f.friendId : f.userId
+    );
+    excludedUserIds.push(userId); // Exclude self
+    
+    // Get rejected friend IDs
+    const rejectedFriendIds = rejectedFriendships.map((f: any) => 
       f.userId === userId ? f.friendId : f.userId
     );
     
-    // Add the user's own ID to exclude from results
-    relatedUserIds.push(userId);
-    
-    // Build search condition to find users who are NOT friends
-    const searchCondition: any = {
-      id: { notIn: relatedUserIds }
-    };
-    
+    // Build base search condition for name/email
+    const baseSearchCondition: any = {};
     if (query.name) {
-      searchCondition.OR = [
+      baseSearchCondition.OR = [
         { firstName: { contains: query.name } },
         { lastName: { contains: query.name } },
         { username: { contains: query.name } }
@@ -344,45 +353,71 @@ export class PrismaFriendQueryRepository implements IFriendQueryRepository {
     }
     
     if (query.email) {
-      if (!searchCondition.OR) searchCondition.OR = [];
-      searchCondition.OR.push({ username: { contains: query.email } });
+      if (!baseSearchCondition.OR) baseSearchCondition.OR = [];
+      baseSearchCondition.OR.push({ username: { contains: query.email } });
     }
     
-    // Count total matching non-friends
-    const total = await prisma.users.count({ where: searchCondition });
-    
-    // Get matching non-friends
-    const matchingUsers = await prisma.users.findMany({
-      where: searchCondition,
-      take: paging.limit,
-      skip,
+    // Get all users matching search criteria
+    const users = await prisma.users.findMany({
+      where: {
+        ...baseSearchCondition,
+        id: { notIn: excludedUserIds } // Exclude pending/accepted friends and self
+      },
       orderBy: { createdAt: 'desc' }
     });
     
-    // Map to response format
-    const result = matchingUsers.map((user: any) => {
-      // Create a response object without directly using the database schema
-      // This is a virtual representation, not stored in the database
-      return {
-        id: v7(), // Generate a placeholder ID for the response
-        userId,
-        friendId: user.id,
-        // Use type assertion to bypass the type checking
-        // since this is just for display purposes and won't be stored in DB
-        status: 'none' as any, 
-        createdAt: new Date(),
-        friend: {
-          id: user.id,
-          username: user.username,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          avatar: user.avatar
-        }
-      } as FriendResponseDTO;
-    });
+    // Process results into the appropriate format
+    const results: FriendResponseDTO[] = [];
+    
+    // Process each user
+    for (const user of users) {
+      // Check if this is a rejected friend
+      const rejectedFriendship = rejectedFriendships.find(f => 
+        (f.userId === userId && f.friendId === user.id) || 
+        (f.friendId === userId && f.userId === user.id)
+      );
+      
+      if (rejectedFriendship) {
+        // This is a rejected friend
+        results.push({
+          id: rejectedFriendship.id,
+          userId: rejectedFriendship.userId,
+          friendId: rejectedFriendship.friendId,
+          status: FriendStatus.REJECTED,
+          createdAt: rejectedFriendship.createdAt,
+          friend: {
+            id: user.id,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            avatar: user.avatar
+          }
+        } as FriendResponseDTO);
+      } else {
+        // This is a non-friend
+        results.push({
+          id: v7(), // Generate a placeholder ID for the response
+          userId,
+          friendId: user.id,
+          status: 'none' as any, // Virtual status
+          createdAt: new Date(),
+          friend: {
+            id: user.id,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            avatar: user.avatar
+          }
+        } as FriendResponseDTO);
+      }
+    }
+    
+    // Apply pagination
+    const total = results.length;
+    const paginatedResults = results.slice(skip, skip + paging.limit);
     
     return {
-      data: result,
+      data: paginatedResults,
       paging,
       total
     };

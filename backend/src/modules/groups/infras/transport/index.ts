@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { GroupUseCase } from '../../usecase';
 import { groupMemberUpdateDTOSchema, groupRequestDTOSchema, groupUpdateDTOSchema } from '../../model';
+import { RecommendationService } from '../../service/recommendation-service';
 import { validateRequest } from '@shared/utils';
 import multer from 'multer';
 import path from 'path';
@@ -79,7 +80,11 @@ import fs from 'fs';
  *   description: Group management API
  */
 export class GroupHTTPService {
-  constructor(private useCase: GroupUseCase) {}
+  private recommendationService: RecommendationService;
+  
+  constructor(private useCase: GroupUseCase) {
+    this.recommendationService = new RecommendationService();
+  }
 
   /**
    * @swagger
@@ -725,4 +730,109 @@ export class GroupHTTPService {
       next(error);
     }
   }
+
+    /**
+   * Generate travel recommendations for a location
+   * This endpoint is used during group creation to suggest places to visit
+   */
+    async generateRecommendationsAPI(req: Request, res: Response, next: NextFunction) {
+      try {
+        const userId = res.locals.requester?.sub;
+        if (!userId) {
+          res.status(401).json({ message: 'Unauthorized' });
+          return;
+        }
+        
+        const { location, tripType } = req.body;
+        
+        if (!location) {
+          res.status(400).json({ message: 'Location is required' });
+          return;
+        }
+        
+        const recommendations = await this.recommendationService.generateRecommendations(location, tripType);
+        res.status(200).json(recommendations);
+      } catch (error) {
+        console.error('Error generating recommendations:', error);
+        res.status(500).json({ 
+          message: 'Failed to generate travel recommendations',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    /**
+     * @swagger
+     * /v1/groups/locations/search:
+     *   get:
+     *     summary: Search for locations using LocationIQ API
+     *     tags: [Groups]
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: query
+     *         name: q
+     *         schema:
+     *           type: string
+     *         required: true
+     *         description: Search query string
+     *       - in: query
+     *         name: limit
+     *         schema:
+     *           type: integer
+     *         required: false
+     *         description: Maximum number of results to return (default 5)
+     *     responses:
+     *       '200':
+     *         description: List of location search results
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: array
+     *               items:
+     *                 type: object
+     *                 properties:
+     *                   place_id:
+     *                     type: string
+     *                   osm_id:
+     *                     type: string
+     *                   display_name:
+     *                     type: string
+     *                   lat:
+     *                     type: string
+     *                   lon:
+     *                     type: string
+     *       '400':
+     *         description: Bad request - Missing query parameter
+     *       '401':
+     *         description: Unauthorized
+     *       '500':
+     *         description: Server Error
+     */
+    async searchLocationsAPI(req: Request, res: Response, next: NextFunction) {
+      try {
+        const userId = res.locals.requester?.sub;
+        if (!userId) {
+          res.status(401).json({ message: 'Unauthorized' });
+          return;
+        }
+        
+        const query = req.query.q as string;
+        const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+        
+        if (!query) {
+          res.status(400).json({ message: 'Search query is required' });
+          return;
+        }
+        
+        const locations = await this.recommendationService.searchLocations(query, limit);
+        res.status(200).json(locations);
+      } catch (error) {
+        console.error('Error searching locations:', error);
+        res.status(500).json({ 
+          message: 'Failed to search locations',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
 }
