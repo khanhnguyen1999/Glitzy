@@ -1,11 +1,13 @@
 import { create } from "zustand";
 import { Group } from "@/types";
-import { groupService } from "@/services/groupService";
+import { groupService, LocationSearchResult } from "@/services/groupService";
 
 interface GroupState {
   groups: Group[];
+  searchResults: LocationSearchResult[];
   currentGroup: Group | null;
   isLoading: boolean;
+  isLoadingSearchLocations: boolean;
   error: string | null;
   fetchGroups: (userId: string) => Promise<void>;
   fetchGroupById: (groupId: string) => Promise<Group>;
@@ -14,13 +16,16 @@ interface GroupState {
   deleteGroup: (groupId: string) => Promise<void>;
   addMemberToGroup: (groupId: string, userId: string) => Promise<Group>;
   removeMemberFromGroup: (groupId: string, userId: string) => Promise<Group>;
+  searchLocations: (query: string, limit?: number) => Promise<LocationSearchResult[]>;
   clearError: () => void;
 }
 
 export const useGroupStore = create<GroupState>((set, get) => ({
   groups: [],
+  searchResults: [],
   currentGroup: null,
   isLoading: false,
+  isLoadingSearchLocations: false,
   error: null,
   
   fetchGroups: async (userId: string) => {
@@ -138,6 +143,25 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       set({ 
         isLoading: false, 
         error: error instanceof Error ? error.message : "Failed to remove member from group" 
+      });
+      throw error;
+    }
+  },
+
+  searchLocations: async(query: string, limit: number = 5) => {
+    set({ isLoadingSearchLocations: true, error: null });
+    try {
+      const locations = await groupService.searchLocations(query, limit);
+      set(state => ({ 
+        ...state,
+        isLoadingSearchLocations: false,
+        searchResults: locations
+      }));
+      return locations;
+    } catch (error) {
+      set({ 
+        isLoadingSearchLocations: false, 
+        error: error instanceof Error ? error.message : "Failed to search locations" 
       });
       throw error;
     }

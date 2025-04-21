@@ -5,7 +5,7 @@ import { ArrowLeft, ChevronDown, Home, Users, Plus, DollarSign, User } from 'luc
 import { useGroupStore } from '@/store/groupStore';
 import { useExpenseStore } from '@/store/expenseStore';
 import { useSettlementStore } from '@/store/settlementStore';
-import { useUserStore } from '@/store/userStore';
+import { useAuthStore } from '@/store/authStore';
 import Loading from '@/components/LoadingCommon/Loading';
 // Remove Button import as we're using TouchableOpacity instead
 import { ExpenseSummary as ExpenseSummaryType } from '@/types/trip';
@@ -15,7 +15,7 @@ export default function SettleUpScreen() {
   const router = useRouter();
   const [isPayingNow, setIsPayingNow] = useState(false);
   const [isReminding, setIsReminding] = useState(false);
-  const { user } = useUserStore();
+  const { user } = useAuthStore();
   
   // Group store for fetching group details
   const { 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useUserStore } from '../store/userStore';
+import { useAuthStore } from '../store/authStore';
 import { chatService } from '../services/chatService';
 import { Message } from '../types/chat';
 import { io, Socket } from 'socket.io-client';
@@ -12,7 +12,7 @@ interface TripChatProps {
 }
 
 const TripChat: React.FC<TripChatProps> = ({ tripId }) => {
-  const { user } = useUserStore();
+  const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
   const [loading, setLoading] = useState(true);

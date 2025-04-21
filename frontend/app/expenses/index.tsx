@@ -5,14 +5,14 @@ import { useRouter } from 'expo-router';
 import { colors } from '@/constants/colors';
 import { ExpenseItem } from '@/components/ExpenseItem';
 import { useExpenseStore } from '@/store/expenseStore';
-import { useUserStore } from '@/store/userStore';
+import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/Button';
 import { ArrowLeft, Plus } from 'lucide-react-native';
 
 export default function ExpensesScreen() {
   const router = useRouter();
   const { expenses, fetchExpenses } = useExpenseStore();
-  const { user } = useUserStore();
+  const { user } = useAuthStore();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {

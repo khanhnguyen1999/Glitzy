@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ArrowLeft, Plus, MoreVertical } from 'lucide-react-native';
 import { useGroupStore } from '@/store/groupStore';
 import { useExpenseStore } from '@/store/expenseStore';
-import { useUserStore } from '@/store/userStore';
+import { useAuthStore } from '@/store/authStore';
 import ExpenseSummary from '@/components/ExpenseSummary';
 import { ExpenseItem } from '@/components/ExpenseItem';
 import TripTabs from '@/components/TripTabs';
@@ -17,7 +17,7 @@ export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('expenses');
-  const { user } = useUserStore();
+  const { user } = useAuthStore();
   
   const { 
     fetchGroupById,

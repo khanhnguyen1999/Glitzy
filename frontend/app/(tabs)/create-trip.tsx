@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -7,11 +7,11 @@ import {
   TouchableOpacity, 
   ActivityIndicator, 
   Alert, 
-  Button,
   StyleSheet, 
-  Image,
   SafeAreaView,
-  Modal
+  Modal,
+  TouchableWithoutFeedback,
+  Keyboard
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { useForm } from 'react-hook-form';
@@ -22,20 +22,18 @@ import { SvgXml } from 'react-native-svg';
 
 // Hooks
 import useDebounce from '../../hooks/useDebounce';
-import { useFriendStore } from '../../store/friendStore';
-import { useAuthStore } from '../../store/authStore';
+import { useFriendStore } from '@/store/friendStore';
+import { useAuthStore } from '@/store/authStore';
+import { useGroupStore } from '@/store/groupStore';
 
 // Services
-import { createTripGroup } from '../../services/tripService';
-import { getLocationRecommendations } from '../../services/recommendationService';
-import { groupService } from '../../services/groupService';
+import { getLocationRecommendations } from '@/services/recommendationService';
 
 // Components
 import { SuggestedPlace } from '@/components/SuggestedPlace';
 
 // Types
-import { Location } from '../../types/location';
-import { LocationSearchResult } from '../../services/groupService';
+import { Location } from '@/types/location';
 import { TravelRecommendation } from '@/stores/travelRecommendationStore';
 
 // Constants
@@ -54,11 +52,11 @@ const TRIP_TYPES = [
 export default function CreateTripScreen() {
   const router = useRouter();
   const { friends, fetchFriends } = useFriendStore();
+  const { searchLocations } = useGroupStore();
   const { user } = useAuthStore();
   
   // Form state
   const [tripName, setTripName] = useState('');
-  const [destination, setDestination] = useState('');
   const [tripType, setTripType] = useState('Work & Entertainment');
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
@@ -68,12 +66,12 @@ export default function CreateTripScreen() {
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [showTripTypeDropdown, setShowTripTypeDropdown] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [isSelection, setIsSelection] = useState(false);
   
-  // Search state
-  const [address, setAddress] = useState('');
+  // Location search state
+  const [destination, setDestination] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<LocationSearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   
   // Date picker state
@@ -183,22 +181,9 @@ export default function CreateTripScreen() {
   // State variables are already declared above
 
   /**
-   * Search for locations based on query
+   * Location search functionality
    */
-  const handleLocationSearch = useCallback(async (query: string) => {
-    if (query.length < 3) return;
-    
-    setIsSearching(true);
-    try {
-      const results = await groupService.searchLocations(query);
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Error searching locations:', error);
-      Alert.alert('Error', 'Failed to search locations');
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
+  const { isLoadingSearchLocations, searchResults } = useGroupStore();
   
   // This useEffect will be moved after state declarations
 
@@ -280,14 +265,54 @@ export default function CreateTripScreen() {
       
     setSelectedLocations(newSelectedLocations);
   };
-  // Effect to trigger search when debounced query changes
+  /**
+   * Handle location selection from search results
+   */
+  const handleLocationSelect = (result: any) => {
+    // Get the location name
+    const locationName = result.display_name;
+    
+    // Update destination and search query
+    setDestination(locationName);
+    setSearchQuery(locationName);
+    
+    // Hide results and dismiss keyboard
+    setShowResults(false);
+    setIsFocused(false);
+    Keyboard.dismiss();
+  };
+  
+  // Handle location search when query changes
   useEffect(() => {
-    if (debouncedSearchQuery.length >= 3) {
-      handleLocationSearch(debouncedSearchQuery);
-    } else {
-      setSearchResults([]);
-    }
-  }, [debouncedSearchQuery, handleLocationSearch]);
+    const handleSearch = async () => {
+      // Only search with 3+ characters
+      if (debouncedSearchQuery.length < 3) {
+        setShowResults(false);
+        return;
+      }
+      
+      try {
+        // Search for locations
+        await searchLocations(debouncedSearchQuery);
+        
+        // Show results if input is focused
+        if (isFocused) {
+          setShowResults(true);
+        }
+      } catch (error) {
+        // Handle errors silently
+        setShowResults(false);
+      }
+    };
+    
+    handleSearch();
+  }, [debouncedSearchQuery, searchLocations, isFocused]);
+  
+  // Create a ref for the search input
+  const searchInputRef = useRef(null);
+  
+  // Handle touch outside by using a TouchableWithoutFeedback component
+  // We'll implement this in the UI part with a TouchableWithoutFeedback that wraps the entire screen
 
   /**
    * Handle date change from the date picker
@@ -325,6 +350,10 @@ export default function CreateTripScreen() {
   },[])
 
   return (
+    <TouchableWithoutFeedback onPress={() => {
+      // Keyboard.dismiss();
+      // setShowSearchResults(false);
+    }}>
     <SafeAreaView style={styles.container}>
       {/* Friend Selection Modal */}
       <Modal
@@ -417,32 +446,37 @@ export default function CreateTripScreen() {
               style={[styles.input, isFocused && styles.inputFocused]}
               placeholder="Search for a destination"
               value={searchQuery}
-              onChangeText={(text) => {
-                setSearchQuery(text);
+              onChangeText={setSearchQuery}
+              onFocus={() => {
+                setIsFocused(true);
+                // Show results if we have enough characters
+                if (searchQuery.length >= 3) {
+                  setShowResults(true);
+                }
               }}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
+              onBlur={() => {
+                // Hide results after a short delay to allow selection
+                setTimeout(() => {
+                  setIsFocused(false);
+                  setShowResults(false);
+                }, 150);
+              }}
             />
             
-            {isSearching && (
+            {isLoadingSearchLocations && (
               <View style={styles.searchingIndicator}>
                 <ActivityIndicator size="small" color={colors.primary} />
                 <Text style={styles.searchingText}>Searching...</Text>
               </View>
             )}
             
-            {searchResults.length > 0 && (
+            {showResults && searchResults.length > 0 && debouncedSearchQuery.length >= 3 && (
               <View style={styles.searchResultsContainer}>
                 {searchResults.map((result, index) => (
                   <TouchableOpacity 
                     key={result.place_id || index}
                     style={styles.searchResultItem}
-                    onPress={() => {
-                      setAddress(result.display_name);
-                      setDestination(result.display_name);
-                      setSearchQuery(result.display_name);
-                      setSearchResults([]);
-                    }}
+                    onPress={() => handleLocationSelect(result)}
                   >
                     <Text style={styles.searchResultText}>{result.display_name}</Text>
                   </TouchableOpacity>
@@ -628,6 +662,7 @@ export default function CreateTripScreen() {
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 
