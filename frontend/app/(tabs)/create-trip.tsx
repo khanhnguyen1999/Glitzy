@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import useDebounce from '../../hooks/useDebounce';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Button } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 // import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useFriendStore } from '../../store/friendStore';
@@ -225,6 +225,27 @@ export default function CreateTripScreen() {
       setSearchResults([]);
     }
   }, [debouncedSearchQuery, handleLocationSearch]);
+
+  const [date, setDate] = useState(new Date(1598051730000));
+  // AndroidMode is a type from DateTimePicker that can be 'date', 'time', etc.
+const [mode, setMode] = useState<any>('date');
+  const [show, setShow] = useState(false);
+
+  const onChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    const currentDate = selectedDate || date;
+    setShow(false);
+    setDate(currentDate);
+  };
+
+  const showMode = (currentMode: any) => {
+    setShow(true);
+    setMode(currentMode);
+  };
+  const showDatepicker = () => {
+    showMode('date');
+  };
+  console.log('setShow ', show)
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen
@@ -339,6 +360,16 @@ export default function CreateTripScreen() {
         <View style={styles.formGroup}>
           <Text style={styles.label}>Dates</Text>
           <View style={styles.dateContainer}>
+          <Button onPress={showDatepicker} title="Show date picker!" />
+          {show && (
+            <DateTimePicker
+              testID="dateTimePicker"
+              value={date}
+              mode={mode}
+              is24Hour={true}
+              onChange={onChange}
+            />
+          )}
           {/* <TextInput
               style={styles.dateInput}
               placeholder="Start Date"
