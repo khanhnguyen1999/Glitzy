@@ -32,5 +32,6 @@ export const colors = {
 
 
   white: '#FFFFFF',
+  black: '#000000',
   danger: '#FF3B30',
 };

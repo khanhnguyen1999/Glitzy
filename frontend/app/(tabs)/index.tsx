@@ -76,7 +76,7 @@ export default function HomeScreen() {
   };
 
   const handleViewDetails = (tripId: string) => {
-    router.push(`/trip/${tripId}`);
+    // router.push(`/trip/${tripId}`);
   };
   
   // Calculate balances

@@ -10,18 +10,20 @@ import {
   Button,
   StyleSheet, 
   Image,
-  SafeAreaView
+  SafeAreaView,
+  Modal
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { ArrowLeft, X, Plus, Check, Sparkles } from 'lucide-react-native';
+import { SvgXml } from 'react-native-svg';
 
 // Hooks
 import useDebounce from '../../hooks/useDebounce';
 import { useFriendStore } from '../../store/friendStore';
-import { useUserStore } from '../../store/userStore';
+import { useAuthStore } from '../../store/authStore';
 
 // Services
 import { createTripGroup } from '../../services/tripService';
@@ -51,8 +53,8 @@ const TRIP_TYPES = [
 
 export default function CreateTripScreen() {
   const router = useRouter();
-  const { friends } = useFriendStore();
-  const { user } = useUserStore();
+  const { friends, fetchFriends } = useFriendStore();
+  const { user } = useAuthStore();
   
   // Form state
   const [tripName, setTripName] = useState('');
@@ -86,7 +88,8 @@ export default function CreateTripScreen() {
   const [selectedLocations, setSelectedLocations] = useState<Location[]>([]);
   
   // Friends state
-  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const [selectedFriends, setSelectedFriends] = useState<any[]>([]);
+  const [friendModalVisible, setFriendModalVisible] = useState(false);
   
   // Form handling
   const { handleSubmit } = useForm({
@@ -104,16 +107,32 @@ export default function CreateTripScreen() {
    */
   const handleRemoveFriend = (friendId: string) => {
     setSelectedFriends(prevFriends => 
-      prevFriends.filter(id => id !== friendId)
+      prevFriends.filter(friend => friend.id !== friendId)
     );
+  };
+
+  /**
+   * Handle selecting a friend from the modal
+   */
+  const handleSelectFriend = (friend: any) => {
+    // Toggle friend selection
+    const isAlreadySelected = selectedFriends.some(f => f.id === friend.id);
+    
+    if (isAlreadySelected) {
+      // Remove friend if already selected
+      setSelectedFriends(selectedFriends.filter(f => f.id !== friend.id));
+    } else {
+      // Add friend if not already selected
+      setSelectedFriends([...selectedFriends, friend]);
+    }
   };
 
   /**
    * Handle adding more friends to the trip
    */
   const handleAddMoreFriends = () => {
-    // This would open a friend selection modal
-    Alert.alert('Coming Soon', 'Friend selection will be available soon');
+    // Open friend selection modal
+    setFriendModalVisible(true);
   };
 
   /**
@@ -137,11 +156,10 @@ export default function CreateTripScreen() {
         destination,
         startDate,
         endDate,
-        memberIds: [...selectedFriends, user?.id],
+        memberIds: [...selectedFriends.map(f => f.id), user?.id],
         selectedLocations,
         tripType
       };
-      console.log('Creating trip:', tripData);
       
       // Uncomment when ready to implement
       // const response = await createTripGroup(tripData);
@@ -300,8 +318,70 @@ export default function CreateTripScreen() {
     showMode('date');
   };
 
+  useEffect(()=>{
+    (async () => {
+      await fetchFriends();
+    })();
+  },[])
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Friend Selection Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={friendModalVisible}
+        onRequestClose={() => setFriendModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Friends</Text>
+              <TouchableOpacity onPress={() => setFriendModalVisible(false)}>
+                <X size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.friendsList}>
+              {friends.length > 0 ? (
+                friends.map((item: any) => {
+                  const isSelected = selectedFriends.some(f => f.id === item.id);
+                  return (
+                    <TouchableOpacity 
+                      key={item.id} 
+                      style={[styles.friendItem, isSelected && styles.selectedFriendItem]}
+                      onPress={() => handleSelectFriend(item)}
+                    >
+                      {item.friend.avatar && <SvgXml style={styles.userAvatar} xml={item.friend.avatar} width="100" height="100" />}
+                      <View style={styles.infoContainer}>
+                        <Text style={styles.name}>{item.friend.firstName} {item.friend.lastName}</Text>
+                        <Text style={styles.username}>
+                          {item.friend?.username ? `@${item.friend.username}` : ''}
+                        </Text>
+                      </View>
+                      {isSelected && (
+                        <View style={styles.selectedCheckmark}>
+                          <Check size={16} color="white" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
+              ) : (
+                <Text style={styles.noFriendsText}>No friends found. Add friends in your profile.</Text>
+              )}
+            </ScrollView>
+            
+            <TouchableOpacity 
+              style={styles.doneButton}
+              onPress={() => setFriendModalVisible(false)}
+            >
+              <Text style={styles.doneButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      
       <Stack.Screen
         options={{
           headerShown: false,
@@ -454,13 +534,13 @@ export default function CreateTripScreen() {
         <View style={styles.formGroup}>
           <Text style={styles.label}>Select Friends</Text>
           <View style={styles.friendsContainer}>
-            {selectedFriends.map((friend: any) => (
-              <View key={friend.id} style={styles.friendChip}>
-                <Image source={{ uri: friend.avatar }} style={styles.friendAvatar} />
-                <Text style={styles.friendName}>{friend.name}</Text>
+            {selectedFriends.map((item: any) => (
+              <View key={item.id} style={styles.friendChip}>
+                {item.friend.avatar && <SvgXml xml={item.friend.avatar} width="20" height="20" />}
+                <Text style={styles.friendName}>{item.friend.firstName} {item.friend.lastName}</Text>
                 <TouchableOpacity 
                   style={styles.removeButton}
-                  onPress={() => handleRemoveFriend(friend.id)}
+                  onPress={() => handleRemoveFriend(item.id)}
                 >
                   <X size={16} color={colors.text} />
                 </TouchableOpacity>
@@ -473,8 +553,13 @@ export default function CreateTripScreen() {
             onPress={handleAddMoreFriends}
           >
             <Plus size={20} color={colors.text} />
-            <Text style={styles.addFriendsText}>Add More Friends</Text>
+            <Text style={styles.addFriendsText}>
+              {selectedFriends.length > 0 
+                ? `${selectedFriends.length} friend${selectedFriends.length > 1 ? 's' : ''} selected • Add more` 
+                : 'Add friends to your trip'}
+            </Text>
           </TouchableOpacity>
+          
         </View>
         
         <View style={styles.formGroup}>
@@ -547,6 +632,95 @@ export default function CreateTripScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    height: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  friendsList: {
+    marginBottom: 20,
+  },
+  friendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  selectedFriendItem: {
+    backgroundColor: '#f0f8ff',
+  },
+  friendItemAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  friendItemName: {
+    fontSize: 16,
+    flex: 1,
+    marginLeft: 6
+  },
+  selectedCheckmark: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noFriendsText: {
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#999',
+  },
+  doneButton: {
+    backgroundColor: colors.primary,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  doneButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  infoContainer: {
+    flex: 1,
+  },
+  userAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
+  },
+  name: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  username: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

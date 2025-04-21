@@ -84,6 +84,7 @@ export default function TripDetailScreen() {
   const handleSettleUp = () => {
     // Handle settle up logic
     console.log('Settle up pressed');
+    router.push(`/groups/${id}/settle-up`);
   };
   
   const handleAddExpense = () => {

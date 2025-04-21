@@ -54,7 +54,7 @@ export const useUserStore = create<UserState>()(
             isAuthenticated: true,
             isLoading: false
           });
-        } catch (error) {
+        } catch (error: any) { 
           console.error('Login error:', error);
           set({
             isLoading: false,
@@ -86,7 +86,7 @@ export const useUserStore = create<UserState>()(
             isAuthenticated: true,
             isLoading: false
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Registration error:', error);
           set({
             isLoading: false,
@@ -123,7 +123,7 @@ export const useUserStore = create<UserState>()(
             user: { ...get().user, ...response.data },
             isLoading: false
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Profile update error:', error);
           set({
             isLoading: false,

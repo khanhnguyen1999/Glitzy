@@ -64,6 +64,7 @@ export default function GroupsScreen() {
               onPress={() => {
                 // Navigate to group details when implemented
                 console.log(`Navigate to group ${item.id}`);
+                router.push(`/groups/${item.id}/expenses`);
               }}
             />
           )}

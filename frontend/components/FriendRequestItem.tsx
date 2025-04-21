@@ -19,8 +19,8 @@ export default function FriendRequestItem({ request, onAccept, onReject }: Frien
       <View style={styles.infoContainer}>
         <Text style={styles.name}>{request.friend.firstName} {request.friend.lastName}</Text>
         <Text style={styles.username}>
-                    {request.friend?.username ? `@${request.friend.username}` : ''}
-                  </Text>
+          {request.friend?.username ? `@${request.friend.username}` : ''}
+        </Text>
       </View>
       
       <View style={styles.actionsContainer}>
