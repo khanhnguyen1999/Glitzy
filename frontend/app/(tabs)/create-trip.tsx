@@ -1,71 +1,95 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import useDebounce from '../../hooks/useDebounce';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Button } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-// import { Picker } from '@react-native-picker/picker';
-import { Ionicons } from '@expo/vector-icons';
-import { useFriendStore } from '../../store/friendStore';
-import { useUserStore } from '../../store/userStore';
-import { createTripGroup } from '../../services/tripService';
-import { getLocationRecommendations } from '../../services/recommendationService';
-import { groupService } from '../../services/groupService';
-import FriendSelector from '../../components/FriendSelector';
-import LocationCard from '../../components/LocationCard';
-import { Location } from '../../types/location';
-import { LocationSearchResult } from '../../services/groupService';
-import { Sparkles } from 'lucide-react-native';
-import DatePicker from 'react-native-date-picker'
-// import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
-
 import { 
+  View, 
+  Text, 
+  ScrollView, 
+  TextInput, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  Alert, 
+  Button,
   StyleSheet, 
   Image,
   SafeAreaView
 } from 'react-native';
-import { Stack } from 'expo-router';
-import { colors } from '@/constants/colors';
-import { ArrowLeft, Search, X, Plus, Check } from 'lucide-react-native';
+import { useRouter, Stack } from 'expo-router';
+import { useForm } from 'react-hook-form';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
+import { ArrowLeft, X, Plus, Check, Sparkles } from 'lucide-react-native';
+
+// Hooks
+import useDebounce from '../../hooks/useDebounce';
+import { useFriendStore } from '../../store/friendStore';
+import { useUserStore } from '../../store/userStore';
+
+// Services
+import { createTripGroup } from '../../services/tripService';
+import { getLocationRecommendations } from '../../services/recommendationService';
+import { groupService } from '../../services/groupService';
+
+// Components
 import { SuggestedPlace } from '@/components/SuggestedPlace';
+
+// Types
+import { Location } from '../../types/location';
+import { LocationSearchResult } from '../../services/groupService';
 import { TravelRecommendation } from '@/stores/travelRecommendationStore';
 
+// Constants
+import { colors } from '@/constants/colors';
+
+
+// Trip type options
+const TRIP_TYPES = [
+  'Relax & Wellness',
+  'Adventure & Exploration',
+  'Culture & Learning',
+  'Food & Shopping',
+  'Work & Entertainment'
+];
 
 export default function CreateTripScreen() {
   const router = useRouter();
   const { friends } = useFriendStore();
   const { user } = useUserStore();
-  const [loading, setLoading] = useState(false);
-  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
-  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
-  const [recommendedLocations, setRecommendedLocations] = useState<Location[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<Location[]>([]);
-  const [showDatePicker, setShowDatePicker] = useState<'start' | 'end' | null>(null);
-  const [showTripTypeDropdown, setShowTripTypeDropdown] = useState(false);
-  const [recommendations, setRecommendations] = useState<TravelRecommendation[]>([]);
-  const [selectedRecommendations, setSelectedRecommendations] = useState<Set<number>>(new Set());
-
-
-
+  
+  // Form state
   const [tripName, setTripName] = useState('');
   const [destination, setDestination] = useState('');
   const [tripType, setTripType] = useState('Work & Entertainment');
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
-
-  const [selectedPlaces, setSelectedPlaces] = useState<string[]>([]);
   
-  // Trip type options
-  const tripTypes = [
-    'Relax & Wellness',
-    'Adventure & Exploration',
-    'Culture & Learning',
-    'Food & Shopping',
-    'Work & Entertainment'
-  ];
+  // UI state
+  const [loading, setLoading] = useState(false);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const [showTripTypeDropdown, setShowTripTypeDropdown] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   
-
-  const { control, handleSubmit, watch, formState: { errors }, setValue } = useForm({
+  // Search state
+  const [address, setAddress] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<LocationSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  
+  // Date picker state
+  const [date, setDate] = useState(new Date(1598051730000));
+  const [mode, setMode] = useState<'date' | 'time'>('date');
+  const [show, setShow] = useState(false);
+  
+  // Recommendations state
+  const [recommendations, setRecommendations] = useState<TravelRecommendation[]>([]);
+  const [selectedRecommendations, setSelectedRecommendations] = useState<Set<number>>(new Set());
+  const [recommendedLocations, setRecommendedLocations] = useState<Location[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<Location[]>([]);
+  
+  // Friends state
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  
+  // Form handling
+  const { handleSubmit } = useForm({
     defaultValues: {
       name: '',
       description: '',
@@ -75,44 +99,61 @@ export default function CreateTripScreen() {
     }
   });
 
+  /**
+   * Handle removing a friend from the selected friends list
+   */
   const handleRemoveFriend = (friendId: string) => {
-    // setSelectedFriends(selectedFriends.filter(friend => friend.id !== friendId));
+    setSelectedFriends(prevFriends => 
+      prevFriends.filter(id => id !== friendId)
+    );
   };
 
+  /**
+   * Handle adding more friends to the trip
+   */
   const handleAddMoreFriends = () => {
     // This would open a friend selection modal
-    // showNotification('Friend selection coming soon', 'info');
+    Alert.alert('Coming Soon', 'Friend selection will be available soon');
   };
 
-  const handleCreateTrip = async (data: any) => {
-    console.log('tripData ',selectedFriends)
+  /**
+   * Handle creating a new trip
+   */
+  const handleCreateTrip = async () => {
+    if (!tripName.trim()) {
+      Alert.alert('Error', 'Please enter a trip name');
+      return;
+    }
 
-    // if (selectedFriends.length === 0) {
-    //   Alert.alert('Error', 'Please select at least one friend');
-    //   return;
-    // }
-
-    // if (selectedLocations.length === 0) {
-    //   Alert.alert('Error', 'Please select at least one location');
-    //   return;
-    // }
+    if (!destination.trim()) {
+      Alert.alert('Error', 'Please enter a destination');
+      return;
+    }
 
     setLoading(true);
     try {
       const tripData = {
-        startDate: new Date(),
-        endDate: new Date(),
+        name: tripName,
+        destination,
+        startDate,
+        endDate,
         memberIds: [...selectedFriends, user?.id],
         selectedLocations,
-        tripType: tripType // Include the trip type
+        tripType
       };
-      console.log('tripData ',tripData)
+      console.log('Creating trip:', tripData);
+      
+      // Uncomment when ready to implement
       // const response = await createTripGroup(tripData);
       // Alert.alert('Success', 'Trip created successfully!');
       // router.push({ 
       //   pathname: '/trip/[id]',
       //   params: { id: response.id }
       // });
+      
+      // For now, just show success and go back
+      Alert.alert('Success', 'Trip creation feature coming soon!');
+      router.back();
     } catch (error) {
       console.error('Error creating trip:', error);
       Alert.alert('Error', 'Failed to create trip');
@@ -123,6 +164,9 @@ export default function CreateTripScreen() {
 
   // State variables are already declared above
 
+  /**
+   * Search for locations based on query
+   */
   const handleLocationSearch = useCallback(async (query: string) => {
     if (query.length < 3) return;
     
@@ -140,6 +184,9 @@ export default function CreateTripScreen() {
   
   // This useEffect will be moved after state declarations
 
+  /**
+   * Generate travel recommendations based on destination and trip type
+   */
   const generateRecommendations = async () => {
     if (!destination) {
       Alert.alert('Error', 'Please enter a destination first');
@@ -149,31 +196,33 @@ export default function CreateTripScreen() {
     setLoadingRecommendations(true);
     try {
       const result = await getLocationRecommendations(destination, tripType);
-      // Transform Location[] to TravelRecommendation[] by adding the required status property
+      
+      // Transform Location[] to TravelRecommendation[]
       const recommendationsWithStatus = result.map(location => ({
         ...location,
         status: 'todo' as const,
-        // Ensure image is available for the SuggestedPlace component
         image: location.imageUrl || 'https://images.unsplash.com/photo-1533929736458-ca588d08c8be?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8bG9jYXRpb258ZW58MHx8MHx8&w=1000&q=80'
       }));
+      
       setRecommendations(recommendationsWithStatus);
+      
       // Select all recommendations by default
       const allIndices = new Set(recommendationsWithStatus.map((_, index: number) => index));
-      setSelectedRecommendations(allIndices as Set<number>);
+      setSelectedRecommendations(allIndices);
       
-      // Also update selectedLocations with the selected recommendations
       // Convert TravelRecommendation[] to Location[] for selectedLocations
       const locationsData = recommendationsWithStatus.map(rec => ({
         id: rec.id,
         name: rec.name,
         address: rec.address || '',
-        latitude: 0, // Default values for required Location properties
+        latitude: 0,
         longitude: 0,
         category: '',
         rating: rec.rating || 4.5,
         description: rec.description,
         imageUrl: rec.imageUrl
       }));
+      
       setSelectedLocations(locationsData);
     } catch (error) {
       console.error("Failed to generate recommendations:", error);
@@ -183,7 +232,11 @@ export default function CreateTripScreen() {
     }
   };
   
+  /**
+   * Toggle selection of a recommendation
+   */
   const toggleRecommendation = (index: number) => {
+    // Update the selected indices
     const newSelected = new Set(selectedRecommendations);
     if (newSelected.has(index)) {
       newSelected.delete(index);
@@ -199,24 +252,16 @@ export default function CreateTripScreen() {
         id: rec.id,
         name: rec.name,
         address: rec.address || '',
-        latitude: 0, // Default values for required Location properties
+        latitude: 0,
         longitude: 0,
         category: '',
         rating: rec.rating || 4.5,
         description: rec.description,
         imageUrl: rec.imageUrl
       }));
+      
     setSelectedLocations(newSelectedLocations);
   };
-  const [isFocused, setIsFocused] = useState(false);
-  const [address, setAddress] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<LocationSearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  
-  // Use the custom useDebounce hook
-  const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  
   // Effect to trigger search when debounced query changes
   useEffect(() => {
     if (debouncedSearchQuery.length >= 3) {
@@ -226,25 +271,34 @@ export default function CreateTripScreen() {
     }
   }, [debouncedSearchQuery, handleLocationSearch]);
 
-  const [date, setDate] = useState(new Date(1598051730000));
-  // AndroidMode is a type from DateTimePicker that can be 'date', 'time', etc.
-const [mode, setMode] = useState<any>('date');
-  const [show, setShow] = useState(false);
-
+  /**
+   * Handle date change from the date picker
+   */
   const onChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     const currentDate = selectedDate || date;
     setShow(false);
     setDate(currentDate);
+    
+    // Update the appropriate date based on context
+    if (mode === 'date') {
+      setStartDate(currentDate);
+    }
   };
 
-  const showMode = (currentMode: any) => {
+  /**
+   * Show the date picker with the specified mode
+   */
+  const showMode = (currentMode: 'date' | 'time') => {
     setShow(true);
     setMode(currentMode);
   };
+  
+  /**
+   * Show the date picker in date mode
+   */
   const showDatepicker = () => {
     showMode('date');
   };
-  console.log('setShow ', show)
 
   return (
     <SafeAreaView style={styles.container}>
@@ -337,7 +391,7 @@ const [mode, setMode] = useState<any>('date');
             </TouchableOpacity>
             {showTripTypeDropdown && (
               <View style={styles.dropdownMenu}>
-                {tripTypes.map((type) => (
+                {TRIP_TYPES.map((type: string) => (
                   <TouchableOpacity 
                     key={type} 
                     style={[styles.dropdownItem, tripType === type && styles.dropdownItemSelected]}
@@ -360,28 +414,40 @@ const [mode, setMode] = useState<any>('date');
         <View style={styles.formGroup}>
           <Text style={styles.label}>Dates</Text>
           <View style={styles.dateContainer}>
-          <Button onPress={showDatepicker} title="Show date picker!" />
-          {show && (
-            <DateTimePicker
-              testID="dateTimePicker"
-              value={date}
-              mode={mode}
-              is24Hour={true}
-              onChange={onChange}
-            />
-          )}
-          {/* <TextInput
+            <TouchableOpacity
               style={styles.dateInput}
-              placeholder="Start Date"
-              value={startDate}
-              onChangeText={setStartDate}
-            />
-            <TextInput
+              onPress={() => {
+                showDatepicker();
+              }}
+            >
+              <Text style={startDate ? styles.dateText : styles.datePlaceholder}>
+                {startDate ? startDate.toLocaleDateString() : "Select Start Date"}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
               style={styles.dateInput}
-              placeholder="End Date"
-              value={destination || ''}
-              onChangeText={setEndDate}
-            /> */}
+              onPress={() => {
+                // For now, just use the same date picker
+                // In a full implementation, you'd want to track which date is being edited
+                showDatepicker();
+              }}
+            >
+              <Text style={endDate ? styles.dateText : styles.datePlaceholder}>
+                {endDate ? endDate.toLocaleDateString() : "Select End Date"}
+              </Text>
+            </TouchableOpacity>
+            
+            {show && (
+              <DateTimePicker
+                testID="dateTimePicker"
+                value={date}
+                mode={mode}
+                is24Hour={true}
+                onChange={onChange}
+                minimumDate={new Date()}
+              />
+            )}
           </View>
         </View>
         
@@ -462,10 +528,18 @@ const [mode, setMode] = useState<any>('date');
         </View>
         
         <TouchableOpacity 
-          style={styles.createButton}
+          style={[styles.createButton, loading && styles.disabledButton]}
           onPress={handleCreateTrip}
+          disabled={loading}
         >
-          <Text style={styles.createButtonText}>Create Trip</Text>
+          {loading ? (
+            <>
+              <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+              <Text style={styles.createButtonText}>Creating...</Text>
+            </>
+          ) : (
+            <Text style={styles.createButtonText}>Create Trip</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -650,8 +724,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
     width: '48%',
+    height: 50,
+    justifyContent: 'center',
+  },
+  dateText: {
+    fontSize: 16,
+    color: colors.text,
+  },
+  datePlaceholder: {
+    fontSize: 16,
+    color: colors.textSecondary,
   },
   friendsContainer: {
     flexDirection: 'row',
@@ -709,13 +792,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 16,
     marginBottom: 32,
+    flexDirection: 'row',
   },
   createButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: colors.textSecondary,
+    opacity: 0.7,
   },
   regenerateButton: {
     backgroundColor: colors.primary,
