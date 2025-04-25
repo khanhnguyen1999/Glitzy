@@ -37,9 +37,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="new-trip"
+        name="create-trip"
         options={{
-          title: "New Trip",
+          title: "Create Trip",
           tabBarIcon: ({ color }) => (
             <Plus size={24} color="white" />
           ),
@@ -49,9 +49,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="expenses"
+        name="groups"
         options={{
-          title: "Expenses",
+          title: "Groups",
           tabBarIcon: ({ color }) => <DollarSign size={24} color={color} />,
         }}
       />

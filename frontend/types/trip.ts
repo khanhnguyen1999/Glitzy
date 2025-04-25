@@ -20,14 +20,27 @@ export interface GroupMember {
   joinedAt: Date;
 }
 
+export interface Location {
+  address: string;
+  category: string,
+  description?: string;
+  id: string;
+  imageUrl?: string;
+  latitude?: number,
+  longitude?: number,
+  name: string;
+  rating: number
+}
+
 export interface CreateTripGroupDto {
   name: string;
   description?: string;
   destination: string;
-  startDate: string;
-  endDate: string;
+  startDate: Date;
+  endDate: Date;
   memberIds: string[];
   selectedLocations?: Location[];
+  category: string;
 }
 
 export interface UpdateTripGroupDto {

@@ -38,6 +38,7 @@ import { TravelRecommendation } from '@/stores/travelRecommendationStore';
 
 // Constants
 import { colors } from '@/constants/colors';
+import { createTripGroup } from '@/services/tripService';
 
 
 // Trip type options
@@ -132,7 +133,7 @@ export default function CreateTripScreen() {
     // Open friend selection modal
     setFriendModalVisible(true);
   };
-
+  console.log('selectedFriends ',selectedFriends)
   /**
    * Handle creating a new trip
    */
@@ -154,18 +155,19 @@ export default function CreateTripScreen() {
         destination,
         startDate,
         endDate,
-        memberIds: [...selectedFriends.map(f => f.id), user?.id],
+        memberIds: [...selectedFriends.map(f => f.friendId), user?.id],
         selectedLocations,
-        tripType
+        category: tripType
       };
       
       // Uncomment when ready to implement
-      // const response = await createTripGroup(tripData);
-      // Alert.alert('Success', 'Trip created successfully!');
-      // router.push({ 
-      //   pathname: '/trip/[id]',
-      //   params: { id: response.id }
-      // });
+      const response = await createTripGroup(tripData);
+      console.log('response ',response)
+      Alert.alert('Success', 'Trip created successfully!');
+      router.push({ 
+        pathname: '/groups/[id]',
+        params: { id: response.id }
+      });
       
       // For now, just show success and go back
       Alert.alert('Success', 'Trip creation feature coming soon!');

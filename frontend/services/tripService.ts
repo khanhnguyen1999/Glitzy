@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_URL, ENDPOINTS } from '../constants/api';
 import { TripGroup, CreateTripGroupDto, UpdateTripGroupDto } from '../types/trip';
+import api from "./api";
 
 // Configure axios with auth token
 const getAuthHeader = () => {
@@ -42,13 +43,8 @@ export const getTripDetails = async (tripId: string): Promise<TripGroup> => {
  * Create a new trip group
  */
 export const createTripGroup = async (tripData: CreateTripGroupDto): Promise<TripGroup> => {
-  try {
-    const response = await axios.post(`${API_URL}${ENDPOINTS.GROUPS}`, tripData, getAuthHeader());
-    return response.data;
-  } catch (error) {
-    console.error('Error creating trip group:', error);
-    throw error;
-  }
+  const response = await api.post(`${API_URL}${ENDPOINTS.GROUPS}`, tripData);
+  return response.data;
 };
 
 /**

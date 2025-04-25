@@ -205,8 +205,20 @@ export class PrismaGroupRepository implements IGroupRepository {
 
     // Add members if provided
     if (memberIds && memberIds.length > 0) {
+      // Validate all memberIds exist in users table (except creator)
+      const idsToCheck = memberIds.filter(id => id !== creatorId);
+      if (idsToCheck.length > 0) {
+        const foundUsers = await prisma.users.findMany({
+          where: { id: { in: idsToCheck } },
+          select: { id: true }
+        });
+        const foundUserIds = foundUsers.map(u => u.id);
+        const invalidIds = idsToCheck.filter(id => !foundUserIds.includes(id));
+        if (invalidIds.length > 0) {
+          throw new Error(`Invalid memberIds: ${invalidIds.join(", ")}`);
+        }
+      }
       for (const memberId of memberIds) {
-        // Skip if the member is the creator (already added as admin)
         if (memberId !== creatorId) {
           await this.memberCommandRepo.create(group.id, memberId, GroupMemberRole.MEMBER);
         }
